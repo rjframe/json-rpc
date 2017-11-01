@@ -1,0 +1,9 @@
+{
+	"name": "jsonrpc",
+	"authors": [
+		"Ryan Frame"
+	],
+	"description": "JSON-RPC protocol library.",
+	"copyright": "Copyright © 2017 Ryan Frame",
+	"license": "MIT"
+}
