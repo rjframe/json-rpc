@@ -30,11 +30,18 @@ void raise(ExceptionClass, T...)(
     throw new Except(msg, file, line);
 }
 
+// I cannot define an exception within the unittest scope for testing/examples.
 ///
 unittest {
+    /* Where InvalidArgummentException is defined as:
+    class InvalidArgumentException : Exception {
+        this() { super(""); }
+    }
+    */
+
     void func(bool one, bool two) {
         if (one == two) {
-            raise!(Exception, one, two)("The values shouldn't match!");
+            raise!(InvalidArgumentException, one, two)("The values shouldn't match!");
         }
     }
     func(false, true);
