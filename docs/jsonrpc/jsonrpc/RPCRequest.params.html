@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>RPCRequest.params - multiple declarations</title>
+		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
+		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
+	</head>
+	<body onload="setupDdox();">
+		<nav id="main-nav">
+			<noscript>
+				<p style="color: red">The search functionality needs JavaScript enabled</p>
+			</noscript>
+			<div id="symbolSearchPane" style="display: none">
+				<form action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
+				</form>
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+$('#symbolSearchPane').show();</script>
+			</div>
+			<ul class="tree-view">
+				<li class="tree-view ">
+					<div class="package ">jsonrpc
+					</div>
+			<ul class="tree-view">
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/exception.html">exception</a>
+					</div>
+				</li>
+				<li>
+					<div class="module selected">
+						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
+					</div>
+				</li>
+			</ul>
+				</li>
+			</ul>
+		</nav>
+		<div id="main-contents">
+			<h1>RPCRequest.params - multiple declarations</h1>
+			<nav class="page-nav">
+				<ul>
+					<li>
+						<a href="#0">
+							Function <code>RPCRequest.params</code>
+						</a>
+					</li>
+					<li>
+						<a href="#1">
+							Function <code>RPCRequest.params</code>
+						</a>
+					</li>
+					<li>
+						<a href="#2">
+							Function <code>RPCRequest.params</code>
+						</a>
+					</li>
+				</ul>
+			</nav><h2 id="0">Function RPCRequest.params</h2><p>Retrieve the parameters that will be passed to the method.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">params
+			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			
+			<h2 id="1">Function RPCRequest.params</h2><p>Set the parameters to the method that will be called.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="typ">void</span> <span class="pln">params</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">val</span>
+			<br/>
+			<span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>The JSONValue must be an Object or Array.
+</p>
+</section>
+
+			<section><h3>Parameters</h3>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="val">val</td><td>   A JSON Object or array.</td></tr>
+</table>
+</section>
+<section><h3>Throws</h3>
+<p>InvalidParameterException if val is not a JSON Object or array.
+</p>
+</section>
+<h2 id="2">Function RPCRequest.params</h2><p>Sends a JSON string as the parameters for the method.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="typ">void</span> <span class="pln">params</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">json</span>
+			<br/>
+			<span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>The string must be a JSON Object or array.
+</p>
+</section>
+
+			<section><h3>Parameters</h3>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="json">json</td><td>   A JSON string.</td></tr>
+</table>
+</section>
+<section><h3>Throws</h3>
+<p>InvalidParameterException if the json string is not a JSON Object or
+            array.
+</p>
+</section>
+
+			<footer>
+				<table class="license-info">
+					<tr>
+						<th>Authors</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>Copyright</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>License</th>
+						<td>
+							
+						</td>
+					</tr>
+				</table>
+				<p class="faint">Generated using the DDOX documentation generator</p>
+			</footer>
+		</div>
+	</body>
+</html>

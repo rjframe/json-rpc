@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Function RPCClient.callAsync</title>
+		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
+		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
+	</head>
+	<body onload="setupDdox();">
+		<nav id="main-nav">
+			<noscript>
+				<p style="color: red">The search functionality needs JavaScript enabled</p>
+			</noscript>
+			<div id="symbolSearchPane" style="display: none">
+				<form action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
+				</form>
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+$('#symbolSearchPane').show();</script>
+			</div>
+			<ul class="tree-view">
+				<li class="tree-view ">
+					<div class="package ">jsonrpc
+					</div>
+			<ul class="tree-view">
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/exception.html">exception</a>
+					</div>
+				</li>
+				<li>
+					<div class="module selected">
+						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
+					</div>
+				</li>
+			</ul>
+				</li>
+			</ul>
+		</nav>
+		<div id="main-contents">
+			<h1>Function RPCClient.callAsync</h1><p>Make a non-blocking remote function call.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="typ">int</span> <span class="pln">callAsync</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">params</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+			<br/>
+			<br/>
+			<span class="typ">int</span> <span class="pln">callAsync</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">params</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>Use the returned request ID to obtain the server's response.
+</p>
+</section>
+
+			<section><h2>Parameters</h2>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="func">func</td><td>  The name of the remote function to call.</td></tr>
+<tr><td id="params">params</td><td> A valid JSON array or Object containing the function
+                     parameters.</td></tr>
+</table>
+</section>
+<section><h2>Returns</h2>
+<p>The ID of the request. This ID will be necessary to later
+                 retrieve the server response.
+</p>
+</section>
+
+			<footer>
+				<table class="license-info">
+					<tr>
+						<th>Authors</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>Copyright</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>License</th>
+						<td>
+							
+						</td>
+					</tr>
+				</table>
+				<p class="faint">Generated using the DDOX documentation generator</p>
+			</footer>
+		</div>
+	</body>
+</html>
