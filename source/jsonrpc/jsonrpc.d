@@ -35,9 +35,11 @@ struct RPCRequest {
 
             std.json.JSONException if the json string cannot be parsed.
     */
-    this(string method, string params) {
+    this(string method, string params) in {
+        assert(method.length > 0);
+    } body {
         this.method = method;
-        this.params = params;
+        this.params = params.parseJSON;
     }
 
     /** Construct an RPCRequest with the specified remote method name and
@@ -52,7 +54,9 @@ struct RPCRequest {
             InvalidParameterException if the json string is not a JSON Object or
             array.
     */
-    this(string method, JSONValue params) {
+    this(string method, JSONValue params = JSONValue()) in {
+        assert(method.length > 0);
+    } body {
         this.method = method;
         this.params = params;
     }
@@ -85,7 +89,9 @@ struct RPCRequest {
     */
     @property void params(JSONValue val)
     {
-        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY) {
+        // We consider null to be equivalent to an empty object.
+        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
+                && val.type != JSON_TYPE.NULL) {
             raise!(InvalidParameterException, val)
                     ("Invalid JSON-RPC method parameter type.");
         }
@@ -105,7 +111,9 @@ struct RPCRequest {
 
             std.json.JSONException if the json string cannot be parsed.
     */
-    @property void params(string json) {
+    @property void params(string json) in {
+        assert(json.length > 0);
+    } body {
         params(json.parseJSON);
     }
 }
@@ -116,6 +124,7 @@ unittest {
     auto req2 = new RPCRequest("some_method", `["abc", "def"]`);
     auto json = JSONValue([1, 2, 3]);
     auto req3 = new RPCRequest("some_method", json);
+    auto req4 = new RPCRequest("some_method");
 }
 
 /** The RPC server's response sent to clients. */
@@ -249,7 +258,9 @@ class RPCClient(API) if (is(API == interface)) {
             host =  The hostname or address of the RPC server.
             port =  The port at which to connect to the server.
     */
-    this(string host, ushort port) {
+    this(string host, ushort port) in {
+        assert(host.length > 0);
+    } body {
         assert(0, "constructor not implemented.");
     }
 
@@ -268,28 +279,30 @@ class RPCClient(API) if (is(API == interface)) {
     */
     auto ref opDispatch(string apiFunc, ARGS...)(ARGS args) {
         import std.traits;
+        static if (! hasMember!(API, apiFunc)) {
+            raise!(InvalidArgumentException!(args)
+                    ("Argument does not match the remote function interface."));
+        }
 
-        static if (hasMember!(API, apiFunc)) {
-            import std.conv : text;
-            import std.meta : AliasSeq;
-            import std.range : iota;
+        import std.conv : text;
+        import std.meta : AliasSeq;
+        import std.range : iota;
 
-            mixin(
-                "alias paramTypes = AliasSeq!(Parameters!(API."
-                ~ apiFunc ~ "));\n" ~
-                "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
-                ~ apiFunc ~ "));\n"
-            );
+        mixin(
+            "alias paramTypes = AliasSeq!(Parameters!(API."
+            ~ apiFunc ~ "));\n" ~
+            "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
+            ~ apiFunc ~ "));\n"
+        );
 
-            auto jsonArgs = JSONValue();
-            static foreach (i; iota(0, args.length)){
-                assert(is(typeof(args[i]) == paramTypes[i]));
+        auto jsonArgs = JSONValue();
+        static foreach (i; iota(0, args.length)){
+            assert(is(typeof(args[i]) == paramTypes[i]));
 
-                mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
-                        i.text ~ "]);");
-            }
-            return callAsync(apiFunc, jsonArgs);
-        } else raise!(InvalidArgumentException!(args)("Argument does not match interface."));
+            mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
+                    i.text ~ "]);");
+        }
+        return callAsync(apiFunc, jsonArgs);
     }
 
     /+ TODO: ParameterIdentifierTuple - Get!2 recursive expansion for call to
@@ -324,15 +337,15 @@ class RPCClient(API) if (is(API == interface)) {
             params = A valid JSON array or Object containing the function
                      parameters.
 
+        Throws:
+            std.json.JSONException if the string cannot be parsed as JSON.
+
         Returns: The server's response.
     */
-    // TODO: Call without passing params.
-    RPCResponse call(string func, string params) {
-        auto id = callAsync(func, params);
-        RPCResponse resp;
-        while(! response(id, resp)) {}
-
-        assert(0, "Call not implemented.");
+    RPCResponse call(string func, string params) in {
+        assert(func.length > 0);
+    } body {
+        return call(func, params.parseJSON);
     }
 
     @test("Doctest: client call example passing params via JSON string.")
@@ -346,8 +359,14 @@ class RPCClient(API) if (is(API == interface)) {
     }
 
     /// ditto
-    // TODO: Call without passing params.
-    RPCResponse call(string func, JSONValue params) { assert(0); }
+    RPCResponse call(string func, JSONValue params = JSONValue()) in {
+        assert(func.length > 0);
+    } body {
+        auto id = callAsync(func, params);
+        RPCResponse resp;
+        while(! response(id, resp)) {}
+        return resp;
+    }
 
     @test("Doctest: client call example passing params via JSONValue.")
     // TODO: Will fail without listening server.
@@ -368,16 +387,16 @@ class RPCClient(API) if (is(API == interface)) {
             params = A valid JSON array or Object containing the function
                      parameters.
 
+        Throws:
+            std.json.JSONException if the string cannot be parsed as JSON.
+
         Returns: The ID of the request. This ID will be necessary to later
                  retrieve the server response.
     */
-    // TODO: Call without passing params.
-    int callAsync(string func, string params) {
-        auto id = callAsync(func, params);
-        RPCResponse resp;
-        while(! response(id, resp)) {}
-
-        assert(0, "callAsync not implemented.");
+    int callAsync(string func, string params) in {
+        assert(func.length > 0);
+    } body {
+        return callAsync(func, params.parseJSON);
     }
 
     @test("Doctest: client callAsync example passing params via JSON string.")
@@ -394,8 +413,9 @@ class RPCClient(API) if (is(API == interface)) {
     }
 
     /// ditto
-    // TODO: Call without passing params.
-    int callAsync(string func, JSONValue params) {
+    int callAsync(string func, JSONValue params = JSONValue()) in {
+        assert(func.length > 0);
+    } body {
         assert(0, "callAsync not implemented.");
     }
 
@@ -474,7 +494,9 @@ class RPCServer(API) {
             host = The hostname or IP address on which to listen.
             port = The port on which to listen.
     */
-    void listen(string host, ushort port) {
+    void listen(string host, ushort port) in {
+        assert(host.length > 0);
+    } body {
         // TODO: lookup hostnames. getAddress is supposed to - why can't I bind
         // localhost? (because it's special?)
         auto s = new TcpSocket();
