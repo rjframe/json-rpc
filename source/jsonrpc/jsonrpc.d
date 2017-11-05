@@ -4,6 +4,9 @@ module jsonrpc.jsonrpc;
 import std.json;
 import jsonrpc.exception;
 
+version(Have_tested) import tested : test = name;
+else private struct test { string name; }
+
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
     private:
@@ -11,6 +14,44 @@ struct RPCRequest {
     int _id;
     JSONValue _params;
     string _method;
+
+    package:
+
+    /** Construct an RPCRequest with the specified remote method name and
+        arguments.
+
+        Params:
+            method =    The name of the remote method to call.
+            params =    A JSON string containing the method arguments as a JSON
+                        Object or array.
+
+        Throws:
+            InvalidParameterException if the json string is not a JSON Object or
+            array.
+
+            std.json.JSONException if the json string cannot be parsed.
+    */
+    this(string method, string params) {
+        this.method = method;
+        this.params = params;
+    }
+
+    /** Construct an RPCRequest with the specified remote method name and
+        arguments.
+
+        Params:
+            method =    The name of the remote method to call.
+            params =    A JSON string containing the method arguments as a JSON
+                        Object or array.
+
+        Throws:
+            InvalidParameterException if the json string is not a JSON Object or
+            array.
+    */
+    this(string method, JSONValue params) {
+        this.method = method;
+        this.params = params;
+    }
 
     public:
 
@@ -57,10 +98,20 @@ struct RPCRequest {
         Throws:
             InvalidParameterException if the json string is not a JSON Object or
             array.
+
+            std.json.JSONException if the json string cannot be parsed.
     */
     @property void params(string json) {
         params(json.parseJSON);
     }
+}
+
+@test("Test RPCRequest constructor.")
+unittest {
+    auto req1 = new RPCRequest("some_method", `{ "arg1": "value1" }`);
+    auto req2 = new RPCRequest("some_method", `["abc", "def"]`);
+    auto json = JSONValue([1, 2, 3]);
+    auto req3 = new RPCRequest("some_method", json);
 }
 
 /** The RPC server's response sent to clients. */
@@ -206,8 +257,12 @@ class RPCClient(API) if (is(API == interface)) {
 
         Params:
             args = The arguments of the remote function to call.
+
+        Throws:
+            InvalidArgumentException if the argument types do not match the
+            remote interface.
     */
-    void opDispatch(string apiFunc, ARGS...)(ARGS args) {
+    auto ref opDispatch(string apiFunc, ARGS...)(ARGS args) {
         import std.traits;
 
         static if (hasMember!(API, apiFunc)) {
@@ -229,7 +284,7 @@ class RPCClient(API) if (is(API == interface)) {
                 mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
                         i.text ~ "]);");
             }
-            callAsync(apiFunc, jsonArgs);
+            return callAsync(apiFunc, jsonArgs);
         } else raise!(InvalidArgumentException!(args)("Argument does not match interface."));
     }
 
@@ -292,18 +347,24 @@ class RPCClient(API) if (is(API == interface)) {
     }
 }
 
+@test("Doctest: Remote function call syntax builds properly.")
+// Note: opDispatch is not called, so we're not testing that function.
+// Without doStuff, we would need a listening server for the test to pass;
+// I don't want to document all of that here.
 ///
 unittest {
     interface MyAPI {
         bool x(int y);
         void a(bool b, int c, string d);
-        int i();
+        auto resp = int i();
     }
 
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-    client.a(true, 2, "somestring");
-    client.x(3);
-    client.i;
+    void doStuff() {
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+        client.a(true, 2, "somestring");
+        client.x(3);
+        client.i;
+    }
 }
 
 /** Implementation of a JSON-RPC client.
