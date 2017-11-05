@@ -69,7 +69,7 @@ $('#symbolSearchPane').show();</script>
 				</code>
 			</div>
 			
-			<h2 id="1">Function RPCRequest.params</h2><p>Set the parameters to the method that will be called.
+			<h2 id="1">Function RPCRequest.params</h2><p>Set the parameters to the remote method that will be called.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -96,7 +96,7 @@ $('#symbolSearchPane').show();</script>
 <p>InvalidParameterException if val is not a JSON Object or array.
 </p>
 </section>
-<h2 id="2">Function RPCRequest.params</h2><p>Sends a JSON string as the parameters for the method.
+<h2 id="2">Function RPCRequest.params</h2><p>Set the parameters to the remote method as a JSON string.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -122,6 +122,9 @@ $('#symbolSearchPane').show();</script>
 <section><h3>Throws</h3>
 <p>InvalidParameterException if the json string is not a JSON Object or
             array.
+</p>
+
+<p>            std.json.JSONException if the json string cannot be parsed.
 </p>
 </section>
 

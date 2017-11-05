@@ -1,9 +1,15 @@
 {
-	"name": "jsonrpc",
-	"authors": [
-		"Ryan Frame"
-	],
-	"description": "JSON-RPC protocol library.",
-	"copyright": "Copyright © 2017 Ryan Frame",
-	"license": "MIT"
+    "name": "jsonrpc",
+    "authors": [
+        "Ryan Frame"
+    ],
+    "description": "JSON-RPC protocol library.",
+    "copyright": "Copyright © 2017 Ryan Frame",
+    "license": "MIT",
+    "dependencies": {
+        "tested": {
+           "version": "~>0.9.4",
+           "optional": true
+        }
+    }
 }

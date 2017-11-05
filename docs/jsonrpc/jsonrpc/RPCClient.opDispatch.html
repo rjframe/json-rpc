@@ -44,7 +44,7 @@ $('#symbolSearchPane').show();</script>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">void</span> <span class="pln">opDispatch</span>(<span class="typ">string</span> apiFunc, ARGS...)
+			<span class="kwd">auto ref </span><span class="kwd">auto</span> <span class="pln">opDispatch</span>(<span class="typ">string</span> apiFunc, ARGS...)
 			<span class="pun">(</span>
 			<br/>
 			&nbsp;&nbsp;<span class="pln">ARGS</span> <span class="pln">args</span>
@@ -63,6 +63,11 @@ $('#symbolSearchPane').show();</script>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
 <tr><td id="args">args</td><td> The arguments of the remote function to call.</td></tr>
 </table>
+</section>
+<section><h2>Throws</h2>
+<p>InvalidArgumentException if the argument types do not match the
+            remote interface.
+</p>
 </section>
 
 			<footer>

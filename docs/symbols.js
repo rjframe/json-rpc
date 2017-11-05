@@ -8,7 +8,7 @@ var symbols = [
 {name: 'jsonrpc.jsonrpc.RPCClient', kind: "classdeclaration", path: './jsonrpc/jsonrpc/RPCClient.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCClient.call', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.call.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCClient.callAsync', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.callAsync.html', attributes: []},
-{name: 'jsonrpc.jsonrpc.RPCClient.opDispatch', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.opDispatch.html', attributes: []},
+{name: 'jsonrpc.jsonrpc.RPCClient.opDispatch', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.opDispatch.html', attributes: ["auto", "ref"]},
 {name: 'jsonrpc.jsonrpc.RPCClient.response', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.response.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCClient.this', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCClient.this.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCRequest', kind: "structdeclaration", path: './jsonrpc/jsonrpc/RPCRequest.html', attributes: []},

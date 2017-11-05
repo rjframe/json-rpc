@@ -123,20 +123,6 @@ $('#symbolSearchPane').show();</script>
             remote server.</td></tr>
 </table>
 </section>
-<section><h2>Example</h2>
-
-<pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">MyAPI </span><span class="pun">{
-    </span><span class="typ">bool </span><span class="pln">x</span><span class="pun">(</span><span class="typ">int </span><span class="pln">y</span><span class="pun">);
-    </span><span class="typ">void </span><span class="pln">a</span><span class="pun">(</span><span class="typ">bool </span><span class="pln">b</span><span class="pun">, </span><span class="typ">int </span><span class="pln">c</span><span class="pun">, </span><span class="typ">string </span><span class="pln">d</span><span class="pun">);
-    </span><span class="typ">int </span><span class="pln">i</span><span class="pun">();
-}
-
-</span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCClient</span><span class="pun">!</span><span class="typ">MyAPI</span><span class="pun">(</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
-</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">a</span><span class="pun">(</span><span class="kwd">true</span><span class="pun">, </span><span class="lit">2</span><span class="pun">, </span><span class="str">"somestring"</span><span class="pun">);
-</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">x</span><span class="pun">(</span><span class="lit">3</span><span class="pun">);
-</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">i</span><span class="pun">;
-</span></code></pre>
-</section>
 
 			<footer>
 				<table class="license-info">

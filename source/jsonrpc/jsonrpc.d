@@ -7,6 +7,10 @@ import jsonrpc.exception;
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
+version(unittest) {
+    // TODO: Mock a server for RPCClient tests.
+}
+
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
     private:
@@ -69,7 +73,7 @@ struct RPCRequest {
     /** Retrieve the parameters that will be passed to the method. */
     @property JSONValue params() { return _params; }
 
-    /** Set the parameters to the method that will be called.
+    /** Set the parameters to the remote method that will be called.
 
         The JSONValue must be an Object or Array.
 
@@ -88,7 +92,7 @@ struct RPCRequest {
         _params = val;
     }
 
-    /** Sends a JSON string as the parameters for the method.
+    /** Set the parameters to the remote method as a JSON string.
 
         The string must be a JSON Object or array.
 
@@ -288,6 +292,31 @@ class RPCClient(API) if (is(API == interface)) {
         } else raise!(InvalidArgumentException!(args)("Argument does not match interface."));
     }
 
+    /+ TODO: ParameterIdentifierTuple - Get!2 recursive expansion for call to
+       `a` when this is in the RPCCLient. Outside the class template this isn't
+       a problem.
+
+    @test("Doctest: Remote function call syntax builds properly.")
+    // Note: opDispatch is not called, so we're not testing that function.
+    // Without doStuff, we would need a listening server for the test to pass;
+    // I don't want to document all of that here.
+    ///
+    unittest {
+        interface MyAPI {
+            bool x(int y);
+            void a(bool b, int c, string d);
+            int i();
+        }
+
+        void doStuff() {
+            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+            client.a(true, 2, "somestring");
+            client.x(3);
+            auto resp = client.i;
+        }
+    }
+    +/
+
     /** Make a blocking remote function call.
 
         Params:
@@ -297,6 +326,7 @@ class RPCClient(API) if (is(API == interface)) {
 
         Returns: The server's response.
     */
+    // TODO: Call without passing params.
     RPCResponse call(string func, string params) {
         auto id = callAsync(func, params);
         RPCResponse resp;
@@ -305,8 +335,29 @@ class RPCClient(API) if (is(API == interface)) {
         assert(0, "Call not implemented.");
     }
 
+    @test("Doctest: client call example passing params via JSON string.")
+    // TODO: Will fail without listening server.
+    ///
+    unittest {
+        interface MyAPI { void func(int val); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+        auto resp = client.call("func", `{ "val": 3 }`);
+    }
+
     /// ditto
+    // TODO: Call without passing params.
     RPCResponse call(string func, JSONValue params) { assert(0); }
+
+    @test("Doctest: client call example passing params via JSONValue.")
+    // TODO: Will fail without listening server.
+    ///
+    unittest {
+        interface MyAPI { void func(int val1, int val2, int val3); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+        auto resp = client.call("func", JSONValue([1 ,2, 3]));
+    }
 
     /** Make a non-blocking remote function call.
 
@@ -320,6 +371,7 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: The ID of the request. This ID will be necessary to later
                  retrieve the server response.
     */
+    // TODO: Call without passing params.
     int callAsync(string func, string params) {
         auto id = callAsync(func, params);
         RPCResponse resp;
@@ -328,9 +380,36 @@ class RPCClient(API) if (is(API == interface)) {
         assert(0, "callAsync not implemented.");
     }
 
+    @test("Doctest: client callAsync example passing params via JSON string.")
+    // TODO: Will fail without listening server.
+    ///
+    unittest {
+        interface MyAPI { void func(int val); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+        auto id = client.callAsync("func", `{ "val": 3 }`);
+        RPCResponse resp;
+        while (! client.response(id, resp)) { /* wait for it... */ }
+        // Do something with resp here.
+    }
+
     /// ditto
+    // TODO: Call without passing params.
     int callAsync(string func, JSONValue params) {
         assert(0, "callAsync not implemented.");
+    }
+
+    @test("Doctest: client callAsync example passing params via JSONValue.")
+    // TODO: Will fail without listening server.
+    ///
+    unittest {
+        interface MyAPI { void func(int val1, int val2, int val3); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+        auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
+        RPCResponse resp;
+        while (! client.response(id, resp)) { /* wait for it... */ }
+        // Do something with resp here.
     }
 
     /** Check for a response from an asynchronous remote call.
@@ -347,25 +426,23 @@ class RPCClient(API) if (is(API == interface)) {
     }
 }
 
-@test("Doctest: Remote function call syntax builds properly.")
-// Note: opDispatch is not called, so we're not testing that function.
-// Without doStuff, we would need a listening server for the test to pass;
-// I don't want to document all of that here.
-///
+/+ TODO: We're running out of memory now trying to build this.
+@test("[not complete] RPCClient.opDispatch forwards calls to the server.")
+// TODO: I need to mock (reqs a new constructor) a server so we can actually
+// test opDispatch here.
 unittest {
     interface MyAPI {
         bool x(int y);
         void a(bool b, int c, string d);
-        auto resp = int i();
+        int i();
     }
 
-    void doStuff() {
-        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-        client.a(true, 2, "somestring");
-        client.x(3);
-        client.i;
-    }
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    client.a(true, 2, "somestring");
+    client.x(3);
+    auto resp = client.i;
 }
++/
 
 /** Implementation of a JSON-RPC client.
 
@@ -406,6 +483,7 @@ class RPCServer(API) {
     }
 }
 
+@test("Doctest: Start an RPCServer.")
 ///
 unittest {
     class MyAPI {
