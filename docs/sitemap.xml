@@ -11,6 +11,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.call.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.opDispatch.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.response.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.html</loc></url>

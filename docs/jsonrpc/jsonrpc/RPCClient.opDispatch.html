@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.callAsync</title>
+		<title>Function RPCClient.opDispatch</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -39,47 +39,30 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.callAsync</h1><p>Make a non-blocking remote function call.
+			<h1>Function RPCClient.opDispatch</h1><p>Make a non-blocking remote call with natural syntax.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">int</span> <span class="pln">callAsync</span>
+			<span class="typ">void</span> <span class="pln">opDispatch</span>(<span class="typ">string</span> apiFunc, ARGS...)
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">params</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-			<br/>
-			<br/>
-			<span class="typ">int</span> <span class="pln">callAsync</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span>
+			&nbsp;&nbsp;<span class="pln">ARGS</span> <span class="pln">args</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>Use the returned request ID to obtain the server's response.
+			<section><p>Any function (not present on the RPC client itself) that is present in
+        the remote API can be called as if it was a member of the RPC client,
+        and that function call will be forwarded to the remote server.
 </p>
 </section>
 
 			<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="func">func</td><td>  The name of the remote function to call.</td></tr>
-<tr><td id="params">params</td><td> A valid JSON array or Object containing the function
-                     parameters.</td></tr>
+<tr><td id="args">args</td><td> The arguments of the remote function to call.</td></tr>
 </table>
-</section>
-<section><h2>Returns</h2>
-<p>The ID of the request. This ID will be necessary to later
-                 retrieve the server response.
-</p>
 </section>
 
 			<footer>

@@ -71,9 +71,15 @@ $('#symbolSearchPane').show();</script>
 </section>
 <section><h2>Example</h2>
 
-<pre class="code"><code class="lang-d"><span class="typ">void </span><span class="pln">func</span><span class="pun">(</span><span class="typ">bool </span><span class="pln">one</span><span class="pun">, </span><span class="typ">bool </span><span class="pln">two</span><span class="pun">) {
+<pre class="code"><code class="lang-d"><span class="com">/* Where InvalidArgummentException is defined as:
+class InvalidArgumentException : Exception {
+    this() { super(""); }
+}
+*/
+
+</span><span class="typ">void </span><span class="pln">func</span><span class="pun">(</span><span class="typ">bool </span><span class="pln">one</span><span class="pun">, </span><span class="typ">bool </span><span class="pln">two</span><span class="pun">) {
     </span><span class="kwd">if </span><span class="pun">(</span><span class="pln">one </span><span class="pun">== </span><span class="pln">two</span><span class="pun">) {
-        </span><span class="pln">raise</span><span class="pun">!(</span><span class="typ">Exception</span><span class="pun">, </span><span class="pln">one</span><span class="pun">, </span><span class="pln">two</span><span class="pun">)(</span><span class="str">"The values shouldn't match!"</span><span class="pun">);
+        </span><span class="pln">raise</span><span class="pun">!(<a href="../../jsonrpc/exception/InvalidArgumentException.html"></span><span class="typ">InvalidArgumentException</span></a><span class="pun">, </span><span class="pln">one</span><span class="pun">, </span><span class="pln">two</span><span class="pun">)(</span><span class="str">"The values shouldn't match!"</span><span class="pun">);
     }
 }
 </span><span class="pln">func</span><span class="pun">(</span><span class="kwd">false</span><span class="pun">, </span><span class="kwd">true</span><span class="pun">);
