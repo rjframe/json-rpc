@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Module jsonrpc.jsonrpc</title>
+		<title>Module jsonrpc.transport</title>
 		<link rel="stylesheet" type="text/css" href="../styles/ddox.css"/>
 		<link rel="stylesheet" href="../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../scripts/jquery.js">/**/</script><script type="text/javascript" src="../scripts/ddox.js">/**/</script>
@@ -30,12 +30,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module selected">
+					<div class="module ">
 						<a href="../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../jsonrpc/transport.html">transport</a>
 					</div>
 				</li>
@@ -44,13 +44,40 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Module jsonrpc.jsonrpc</h1><p>JSON-RPC 2.0 protocol library.
-</p><section><p>The JSON-RPC 2.0 specification may be found at
-    <a href="http&#58;//www.jsonrpc.org/specification">http&#58;//www.jsonrpc.org/specification</a>
+			<h1>Module jsonrpc.transport</h1><p>Network transport objects.
+</p><section><p>Deriving the RPCClientTransport and RPCServerTransport interfaces allow
+    implementing alternative transport methods (HTTP, SSL sockets, etc.).
 </p>
 </section>
 
 			<section></section>
+			<section>
+				<h2>Interfaces</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="RPCClientTransport" class="[&quot;public&quot;]" href="../jsonrpc/transport/RPCClientTransport.html">RPCClientTransport</a>
+							</code>
+						</td>
+						<td>Interface that provides client transport functions.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="RPCServerTransport" class="[&quot;public&quot;]" href="../jsonrpc/transport/RPCServerTransport.html">RPCServerTransport</a>
+							</code>
+						</td>
+						<td>Interface that provides server transport functions.
+</td>
+					</tr>
+				</table>
+			</section>
 			<section>
 				<h2>Classes</h2>
 				<table>
@@ -61,46 +88,19 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<td>
 							<code>
-								<a id="RPCClient" class="[&quot;public&quot;]" href="../jsonrpc/jsonrpc/RPCClient.html">RPCClient</a>
+								<a id="TCPClientTransport" class="[&quot;public&quot;]" href="../jsonrpc/transport/TCPClientTransport.html">TCPClientTransport</a>
 							</code>
 						</td>
-						<td>Implementation of a JSON-RPC client.
+						<td>TCP transport for RPC clients.
 </td>
 					</tr>
 					<tr>
 						<td>
 							<code>
-								<a id="RPCServer" class="[&quot;public&quot;]" href="../jsonrpc/jsonrpc/RPCServer.html">RPCServer</a>
+								<a id="TCPServerTransport" class="[&quot;public&quot;]" href="../jsonrpc/transport/TCPServerTransport.html">TCPServerTransport</a>
 							</code>
 						</td>
-						<td>Implementation of a JSON-RPC client.
-</td>
-					</tr>
-				</table>
-			</section>
-			<section>
-				<h2>Structs</h2>
-				<table>
-					<col class="caption"/>
-					<tr>
-						<th>Name</th><th>Description</th>
-					</tr>
-					<tr>
-						<td>
-							<code>
-								<a id="RPCRequest" class="[&quot;public&quot;]" href="../jsonrpc/jsonrpc/RPCRequest.html">RPCRequest</a>
-							</code>
-						</td>
-						<td>An RPC request constructed by the client to send to the RPC server.
-</td>
-					</tr>
-					<tr>
-						<td>
-							<code>
-								<a id="RPCResponse" class="[&quot;public&quot;]" href="../jsonrpc/jsonrpc/RPCResponse.html">RPCResponse</a>
-							</code>
-						</td>
-						<td>The RPC server's response sent to clients.
+						<td>TCP transport for RPC servers.
 </td>
 					</tr>
 				</table>

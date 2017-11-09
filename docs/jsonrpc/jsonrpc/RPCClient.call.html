@@ -34,6 +34,11 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
@@ -59,7 +64,7 @@ $('#symbolSearchPane').show();</script>
 			<br/>
 			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span>
+			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span> <span class="pun">=</span> <span class="typ">JSONValue</span><span class="pun">()</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
@@ -73,6 +78,10 @@ $('#symbolSearchPane').show();</script>
 <tr><td id="params">params</td><td> A valid JSON array or Object containing the function
                      parameters.</td></tr>
 </table>
+</section>
+<section><h2>Throws</h2>
+<p>std.json.JSONException if the string cannot be parsed as JSON.
+</p>
 </section>
 <section><h2>Returns</h2>
 <p>The server's response.

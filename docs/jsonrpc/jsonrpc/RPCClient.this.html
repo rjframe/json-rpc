@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.this</title>
+		<title>RPCClient.this - multiple declarations</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -34,12 +34,46 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.this</h1><p>Instantiate an RPCClient bound to the specified host.
+			<h1>RPCClient.this - multiple declarations</h1>
+			<nav class="page-nav">
+				<ul>
+					<li>
+						<a href="#0">
+							Function <code>RPCClient.this</code>
+						</a>
+					</li>
+					<li>
+						<a href="#1">
+							Function <code>RPCClient.this</code>
+						</a>
+					</li>
+				</ul>
+			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified RPCClientTransport.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<a href="../../jsonrpc/transport/RPCClientTransport.html"><span class="typ">RPCClientTransport</span></a> <span class="pln">transport</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			
+			<h2 id="1">Function RPCClient.this</h2><p>Instantiate an RPCClient bound to the specified host via a TCP connection.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -57,7 +91,7 @@ $('#symbolSearchPane').show();</script>
 			</div>
 			<section></section>
 
-			<section><h2>Parameters</h2>
+			<section><h3>Parameters</h3>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
 <tr><td id="host">host</td><td>  The hostname or address of the RPC server.</td></tr>
 <tr><td id="port">port</td><td>  The port at which to connect to the server.</td></tr>

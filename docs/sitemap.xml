@@ -14,6 +14,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.opDispatch.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.response.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.method.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.method.html</loc></url>
@@ -29,4 +30,18 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.listen.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.receive.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.send.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/RPCServerTransport.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/RPCServerTransport.listen.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.receive.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.send.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.this.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.listen.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.this.html</loc></url>
 </urlset>

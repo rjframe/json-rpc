@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.callAsync</title>
+		<title>Interface RPCServerTransport</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,12 +30,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module selected">
+					<div class="module ">
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../../jsonrpc/transport.html">transport</a>
 					</div>
 				</li>
@@ -44,53 +44,35 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.callAsync</h1><p>Make a non-blocking remote function call.
+			<h1>Interface RPCServerTransport</h1><p>Interface that provides server transport functions.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">int</span> <span class="pln">callAsync</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">params</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-			<br/>
-			<br/>
-			<span class="typ">int</span> <span class="pln">callAsync</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span> <span class="pun">=</span> <span class="typ">JSONValue</span><span class="pun">()</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="kwd">interface</span> <span class="typ">RPCServerTransport</span>
+			<span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>Use the returned request ID to obtain the server's response.
-</p>
-</section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="func">func</td><td>  The name of the remote function to call.</td></tr>
-<tr><td id="params">params</td><td> A valid JSON array or Object containing the function
-                     parameters.</td></tr>
-</table>
-</section>
-<section><h2>Throws</h2>
-<p>std.json.JSONException if the string cannot be parsed as JSON.
-</p>
-</section>
-<section><h2>Returns</h2>
-<p>The ID of the request. This ID will be necessary to later
-                 retrieve the server response.
-</p>
-</section>
-
+			
+			<section><h2>Methods</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/RPCServerTransport.listen.html" class="[&quot;public&quot;]">
+								<code>listen</code>
+							</a>
+						</td>
+						<td>Tell a server to listen for incoming connections.
+</td>
+					</tr>
+				</table>
+			</section>
+			
 			<footer>
 				<table class="license-info">
 					<tr>

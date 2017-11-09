@@ -17,8 +17,8 @@ class APIImpl : MyAPI {
     int i() { return 100; };
 }
 
-auto server = new RPCServer!APIImpl(new APIImpl());
-server.listen("127.0.0.1", 54321);
+auto server = new RPCServer!APIImpl(new APIImpl(), "127.0.0.1", 54321);
+server.listen();
 
 
 // Now create a client.

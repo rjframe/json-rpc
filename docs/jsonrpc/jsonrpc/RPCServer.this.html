@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCServer.this</title>
+		<title>RPCServer.this - multiple declarations</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -34,12 +34,31 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCServer.this</h1><p>Construct an RPCServer!API object.
+			<h1>RPCServer.this - multiple declarations</h1>
+			<nav class="page-nav">
+				<ul>
+					<li>
+						<a href="#0">
+							Function <code>RPCServer.this</code>
+						</a>
+					</li>
+					<li>
+						<a href="#1">
+							Function <code>RPCServer.this</code>
+						</a>
+					</li>
+				</ul>
+			</nav><h2 id="0">Function RPCServer.this</h2><p>Construct an RPCServer!API object to communicate via TCP sockets.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -47,13 +66,40 @@ $('#symbolSearchPane').show();</script>
 			<span class="pln">this</span>
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
 			<section><p>api =   The instantiated class or struct providing the RPC API.
+        host =  The host interface on which to listen.
+        port =  The port on which to listen.
+</p>
+</section>
+
+			<h2 id="1">Function RPCServer.this</h2><p>Construct an RPCServer!API object.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<a href="../../jsonrpc/transport/RPCServerTransport.html"><span class="typ">RPCServerTransport</span></a> <span class="pln">transport</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>api =       The instantiated class or struct providing the RPC API.
+        transport = The network transport to use.
 </p>
 </section>
 

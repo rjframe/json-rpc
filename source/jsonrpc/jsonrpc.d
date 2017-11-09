@@ -1,4 +1,8 @@
-/** JSON-RPC 2.0 protocol library. */
+/** JSON-RPC 2.0 protocol library.
+
+    The JSON-RPC 2.0 specification may be found at
+    $(LINK http&#58;//www.jsonrpc.org/specification)
+*/
 module jsonrpc.jsonrpc;
 
 import std.json;
@@ -7,15 +11,13 @@ import jsonrpc.exception;
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
-version(unittest) {
-    // TODO: Mock a server for RPCClient tests.
-}
-
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
+    import jsonrpc.transport;
+
     private:
 
-    int _id;
+    long _id;
     JSONValue _params;
     string _method;
 
@@ -25,6 +27,7 @@ struct RPCRequest {
         arguments.
 
         Params:
+            id =        The ID number of this request.
             method =    The name of the remote method to call.
             params =    A JSON string containing the method arguments as a JSON
                         Object or array.
@@ -35,17 +38,17 @@ struct RPCRequest {
 
             std.json.JSONException if the json string cannot be parsed.
     */
-    this(string method, string params) in {
+    this(long id, string method, string params) in {
         assert(method.length > 0);
     } body {
-        this.method = method;
-        this.params = params.parseJSON;
+        this(id, method, params.parseJSON);
     }
 
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
 
         Params:
+            id =        The ID number of this request.
             method =    The name of the remote method to call.
             params =    A JSON string containing the method arguments as a JSON
                         Object or array.
@@ -54,11 +57,15 @@ struct RPCRequest {
             InvalidParameterException if the json string is not a JSON Object or
             array.
     */
-    this(string method, JSONValue params = JSONValue()) in {
+    this(long id, string method, JSONValue params = JSONValue()) in {
         assert(method.length > 0);
     } body {
         this.method = method;
         this.params = params;
+    }
+
+    string toJSON() {
+        assert(0, "toJSON not implemented.");
     }
 
     public:
@@ -120,11 +127,11 @@ struct RPCRequest {
 
 @test("Test RPCRequest constructor.")
 unittest {
-    auto req1 = new RPCRequest("some_method", `{ "arg1": "value1" }`);
-    auto req2 = new RPCRequest("some_method", `["abc", "def"]`);
+    auto req1 = new RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
+    auto req2 = new RPCRequest(2, "some_method", `["abc", "def"]`);
     auto json = JSONValue([1, 2, 3]);
-    auto req3 = new RPCRequest("some_method", json);
-    auto req4 = new RPCRequest("some_method");
+    auto req3 = new RPCRequest(3, "some_method", json);
+    auto req4 = new RPCRequest(4, "some_method");
 }
 
 /** The RPC server's response sent to clients. */
@@ -132,30 +139,32 @@ struct RPCResponse {
     private:
 
     // Note: Only one of _result, _error will be present.
+    long _id;
     JSONValue _result;
-    int _id;
 
     package:
 
     Error _error;
 
     /** Construct a response to send to the client. */
-    this(int id, JSONValue result) {
+    this(long id, JSONValue result) {
         _id = id;
         _result = result;
     }
 
     /** Construct an error response to send to the client. */
-    this(int id, Error error) {
+    this(long id, Error error) {
         _id = id;
         _error = error;
     }
 
     /** Construct a predefined error response to send to the client. */
-    this(int id, ErrorCode error) {
+    this(long id, ErrorCode error) {
         _id = id;
         _error = Error(error);
     }
+
+    @property long id() { return _id; }
 
     public:
 
@@ -245,14 +254,20 @@ Params:
             remote server.
 */
 class RPCClient(API) if (is(API == interface)) {
-    import std.socket;
+    private:
 
-    private int _nextId;
-    private Socket _socket;
+    int _nextId;
+    // List of received but unused responses when making async calls.
+    RPCClientTransport _transport;
 
     public:
 
-    /** Instantiate an RPCClient bound to the specified host.
+    /** Instantiate an RPCClient with the specified RPCClientTransport. */
+    this(RPCClientTransport transport) {
+        _transport = transport;
+    }
+
+    /** Instantiate an RPCClient bound to the specified host via a TCP connection.
 
         Params:
             host =  The hostname or address of the RPC server.
@@ -261,7 +276,7 @@ class RPCClient(API) if (is(API == interface)) {
     this(string host, ushort port) in {
         assert(host.length > 0);
     } body {
-        assert(0, "constructor not implemented.");
+        _transport = new TCPRPCClientTransport(host, port);
     }
 
     /** Make a non-blocking remote call with natural syntax.
@@ -368,8 +383,8 @@ class RPCClient(API) if (is(API == interface)) {
         return resp;
     }
 
-    @test("Doctest: client call example passing params via JSONValue.")
     // TODO: Will fail without listening server.
+    @test("Doctest: client call example passing params via JSONValue.")
     ///
     unittest {
         interface MyAPI { void func(int val1, int val2, int val3); }
@@ -399,8 +414,8 @@ class RPCClient(API) if (is(API == interface)) {
         return callAsync(func, params.parseJSON);
     }
 
-    @test("Doctest: client callAsync example passing params via JSON string.")
     // TODO: Will fail without listening server.
+    @test("Doctest: client callAsync example passing params via JSON string.")
     ///
     unittest {
         interface MyAPI { void func(int val); }
@@ -416,11 +431,15 @@ class RPCClient(API) if (is(API == interface)) {
     int callAsync(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        assert(0, "callAsync not implemented.");
+        auto req = new RPCRequest(_nextId, func, params);
+        _transport.send(req);
+        ++_nextId;
+        return req.id;
     }
 
-    @test("Doctest: client callAsync example passing params via JSONValue.")
+
     // TODO: Will fail without listening server.
+    @test("Doctest: client callAsync example passing params via JSONValue.")
     ///
     unittest {
         interface MyAPI { void func(int val1, int val2, int val3); }
@@ -441,8 +460,8 @@ class RPCClient(API) if (is(API == interface)) {
 
         Returns: true if the response is ready; otherwise, false.
     */
-    bool response(int id, out RPCResponse response) {
-        assert(0, "response not implemented.");
+    bool response(long id, out RPCResponse response) {
+        return _transport.receive(id, response);
     }
 }
 
@@ -478,33 +497,38 @@ class RPCServer(API) {
     private:
 
     API _api;
-    Socket _socket;
+    RCPServerTransport _transport;
 
     public:
 
     /** Construct an RPCServer!API object.
 
-        api =   The instantiated class or struct providing the RPC API.
+        api =       The instantiated class or struct providing the RPC API.
+        transport = The network transport to use.
     */
-    this(API api) { _api = api; }
+    this(API api, RPCServerTransport transport) {
+        _api = api;
+        _transport = transport;
+    }
+
+    /** Construct an RPCServer!API object to communicate via TCP sockets.
+
+        api =   The instantiated class or struct providing the RPC API.
+        host =  The host interface on which to listen.
+        port =  The port on which to listen.
+    */
+    this(API api, string host, ushort port) {
+        this(api, new TCPServerTransport(host, port));
+    }
 
     /** Listen for connections.
 
         Params:
-            host = The hostname or IP address on which to listen.
-            port = The port on which to listen.
     */
-    void listen(string host, ushort port) in {
-        assert(host.length > 0);
-    } body {
-        // TODO: lookup hostnames. getAddress is supposed to - why can't I bind
-        // localhost? (because it's special?)
-        auto s = new TcpSocket();
-        s.bind(getAddress(host, port)[0]);
-        s.listen(1);
-    }
+    void listen() { _transport.listen; }
 }
 
+/+
 @test("Doctest: Start an RPCServer.")
 ///
 unittest {
@@ -515,3 +539,4 @@ unittest {
     auto server = new RPCServer!MyAPI(new MyAPI);
     server.listen("127.0.0.1", 54321);
 }
++/
