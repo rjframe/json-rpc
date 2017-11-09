@@ -8,6 +8,7 @@ module jsonrpc.transport;
 
 import std.json;
 import std.socket;
+import std.traits : hasMember;
 
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
@@ -31,31 +32,28 @@ version(unittest) {
     }
 }
 
-import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
-
 /** Interface that provides client transport functions. */
-interface RPCClientTransport {
+interface RPCClientTransport(REQ, RESP) if (hasMember!(REQ, "id") ) {
     /** Send a request from a client to a server asynchronously.
 
         Params:
-            request =   The RPCRequest to send to the server.
+            request =   The object to send to the server.
 
         Returns:
             The ID of the request sent.
     */
-    void send(RPCRequest request);
+    void send(REQ request);
 
     /** Check for and return a response to a request from a server.
 
         Params:
             id =        The ID of the request to retrieve.
-            response =  The RPCResponse object requested if available;
-                        otherwise, RPCResponse.init.
+            response =  The object requested if available; otherwise, T.init.
 
         Returns:
-            true if the RPCResponse is available; false otherwise.
+            true if the requested object is available; false otherwise.
     */
-    bool receive(long id, out RPCResponse response);
+    bool receive(long id, out RESP response);
 }
 
 /** Interface that provides server transport functions. */
@@ -65,11 +63,11 @@ interface RPCServerTransport {
 }
 
 /** TCP transport for RPC clients. */
-class TCPClientTransport : RPCClientTransport {
+class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
     private:
 
     Socket _socket;
-    RPCResponse[long] _responses;
+    RESP[long] _responses;
 
     /** Private constructor allows unittesting; we don't want sockets passed in
         explicitly.
@@ -105,8 +103,8 @@ class TCPClientTransport : RPCClientTransport {
         this(new TcpSocket(getAddress(host, port)[0]));
     }
 
-    /** Send an RPCRequest to the connected server. */
-    void send(RPCRequest request) {
+    /** Send an object to the connected server. */
+    void send(REQ request) {
         assert(0, "send not implemented.");
     }
 
@@ -114,12 +112,11 @@ class TCPClientTransport : RPCClientTransport {
 
         Params:
             id =       The ID of the request for which to check for a response.
-            response = A RPCResponse object in which to return the response if
-                       available.
+            response = An object in which to return the response if available.
 
         Returns: true if the response is ready; otherwise, false.
     */
-    bool receive(long id, out RPCResponse response) {
+    bool receive(long id, out RESP response) {
         if (id in _responses) {
             response = _responses[id];
             _responses.remove(id);
@@ -130,7 +127,10 @@ class TCPClientTransport : RPCClientTransport {
 
     @test("TCPClientTransport.receive returns the specified response if possible.")
     unittest {
-        auto transport = new TCPClientTransport(new FakeSocket);
+        import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
+        auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)
+                (new FakeSocket);
+
         auto resp = RPCResponse(3, "{}".parseJSON);
         RPCResponse returnedResponse;
 
