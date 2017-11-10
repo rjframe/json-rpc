@@ -13,6 +13,9 @@ else private struct test { string name; }
 
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
+    import std.typecons : Flag;
+    public import std.typecons : Yes, No;
+
     import jsonrpc.transport;
 
     private:
@@ -60,12 +63,65 @@ struct RPCRequest {
     this(long id, string method, JSONValue params = JSONValue()) in {
         assert(method.length > 0);
     } body {
+        this._id = id;
         this.method = method;
         this.params = params;
     }
 
-    string toJSON() {
-        assert(0, "toJSON not implemented.");
+    /** Convert the RPCRequest to a JSON string to pass to the server.
+
+        Params:
+            prettyPrint =   Yes/no flag to control presentation of the JSON.
+    */
+    string toJSONString(Flag!"prettyPrint" prettyPrint = No.prettyPrint) {
+        import std.format : format;
+        string ret =
+`{
+    "jsonrpc": "%s",
+    "method": "%s",
+    "id": %s`.format(protocolVersion, method, _id);
+
+        if (params.type != JSON_TYPE.NULL) {
+            ret ~= ",\n    \"params\": %s".format(_params.toJSON);
+        }
+        ret ~= "\n}";
+
+        if (! prettyPrint) ret = ret.removeWhitespace;
+        return ret;
+    }
+
+    @test("RPCRequest.toJSONString converts an object with array params.")
+    unittest {
+        auto req = RPCRequest(1, "method", "[1, 2, 3]".parseJSON);
+        assert(req.toJSONString ==
+            `{"jsonrpc":"2.0","method":"method","id":1,"params":[1,2,3]}`);
+    }
+
+    @test("RPCRequest.toJSONString converts an object with Object params.")
+    unittest {
+        auto req = RPCRequest(1, "method", `{"a": "b"}`.parseJSON);
+        assert(req.toJSONString ==
+            `{"jsonrpc":"2.0","method":"method","id":1,"params":{"a":"b"}}`);
+    }
+
+    @test("RPCRequest.toJSONString converts an object with no params.")
+    unittest {
+        auto req = RPCRequest(1, "method");
+        assert(req.toJSONString ==
+            `{"jsonrpc":"2.0","method":"method","id":1}`);
+    }
+
+    @test("RPCRequest.toJSONString pretty-prints without modifying params objects.")
+    unittest {
+        auto req = RPCRequest(1, "method", `{"a space": "b space"}`.parseJSON);
+
+        assert(req.toJSONString(Yes.prettyPrint) ==
+`{
+    "jsonrpc": "2.0",
+    "method": "method",
+    "id": 1,
+    "params": {"a space":"b space"}
+}`);
     }
 
     public:
@@ -540,3 +596,28 @@ unittest {
     server.listen("127.0.0.1", 54321);
 }
 +/
+
+/** Remove all whitespace from a string. */
+string removeWhitespace(string input) {
+    import std.array : appender;
+    import std.uni : isWhite;
+
+    auto str = appender!string;
+    foreach (c; input) {
+        if (! c.isWhite) str ~= c;
+    }
+    return str.data;
+}
+
+@test("removeWhitespace removes spaces, tabs, and newlines.")
+unittest {
+    auto one = "\ta\tb\t\tc\t";
+    auto two = " . .  . ";
+    auto three = "\na\n\n";
+    auto four = "a \t \n  b";
+
+    assert(one.removeWhitespace == "abc");
+    assert(two.removeWhitespace == "...");
+    assert(three.removeWhitespace == "a");
+    assert(four.removeWhitespace == "ab");
+}
