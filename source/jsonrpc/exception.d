@@ -58,3 +58,13 @@ class InvalidParameterException : Exception {
 class InvalidArgumentException : Exception {
     this() { super(""); }
 }
+
+/** Raised when invalid data is received by the client or server. */
+class InvalidDataReceivedException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when data did not send properly. */
+class FailedToSendDataException : Exception {
+    this() { super(""); }
+}

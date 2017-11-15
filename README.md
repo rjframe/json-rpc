@@ -41,6 +41,11 @@ This is not functional yet, so you'll need to check back later.
 Documentation is currently in the docs/ folder; I'll host properly it once the
 project is ready.
 
+## Non-conforming details
+
+* All IDs must be integral; JSON-RPC allows NULL and string IDs as well.
+* (temporary) IDs are required in requests; Notifications are not yet supported.
+
 ## Testing
 
 The [tested](http://code.dlang.org/packages/tested) library is an optional

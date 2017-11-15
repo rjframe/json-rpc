@@ -10,6 +10,8 @@ import std.json;
 import std.socket;
 import std.traits : hasMember;
 
+import jsonrpc.exception;
+
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
@@ -33,7 +35,8 @@ version(unittest) {
 }
 
 /** Interface that provides client transport functions. */
-interface RPCClientTransport(REQ, RESP) if (hasMember!(REQ, "id") ) {
+interface RPCClientTransport(REQ, RESP)
+        if (hasMember!(REQ, "_id") && hasMember!(REQ, "toJSONString")) {
     /** Send a request from a client to a server asynchronously.
 
         Params:
@@ -68,27 +71,14 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
 
     Socket _socket;
     RESP[long] _responses;
+    char[] _data; // = new char[](SocketBufSize);
 
     /** Private constructor allows unittesting; we don't want sockets passed in
         explicitly.
     */
     this(Socket socket) {
         _socket = socket;
-
-        // TODO: Run in a new thread:
-        // TODO: This isn't going to work at all.
-        /*
-        static char[] data = new char[](SocketBufSize);
-        char[SocketBufSize] buf;
-
-        while(true) {
-            auto returnedBytes = _socket.receive(buf);
-            if (returnedBytes > 0) data ~= buf;
-        }
-
-        // TODO: Parse here; it may be incomplete, or have some of the next
-        // response.
-        */
+        _socket.blocking = false;
     }
 
     public:
@@ -124,32 +114,49 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
         }
         return false;
     }
+}
 
-    @test("TCPClientTransport.receive returns the specified response if possible.")
-    unittest {
-        import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
-        auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)
-                (new FakeSocket);
+@test("recvFromSocket returns the bytestream as a JSON object.")
+unittest {
+    import jsonrpc.jsonrpc;
+    //buf = `{"id":3,"result":[1,2,3]}`;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)
+            (new FakeSocket);
 
-        auto resp = RPCResponse(3, "{}".parseJSON);
-        RPCResponse returnedResponse;
+    transport.recvFromSocket();
+    assert(3 in transport._responses,
+            "Response not saved in the transport.");
+    assert(transport._responses[3]._id == 3,
+            "Response didn't store the ID.");
+    assert(transport._responses[3]._result == JSONValue(`[1,2,3]`),
+            "Response didn't store the data.");
+}
 
-        assert(transport.receive(3, returnedResponse) == false,
-                "`receive` returned a response it doesn't have.");
-        assert(returnedResponse.id == 0);
-        transport._responses[3] = resp;
-        assert(transport.receive(3, returnedResponse) == true,
-                "`receive` failed to return a received response.");
-        assert(returnedResponse.id == 3);
+@test("TCPClientTransport.receive returns the specified response if possible.")
+unittest {
+    import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)
+            (new FakeSocket);
 
-        assert(transport.receive(3, returnedResponse) == false,
-                "`receive` did not remove a previously-returned response.");
-        assert(returnedResponse.id == 0);
-    }
+    auto resp = RPCResponse(3, "{}".parseJSON);
+    RPCResponse returnedResponse;
+
+    assert(transport.receive(3, returnedResponse) == false,
+            "`receive` returned a response it doesn't have.");
+    assert(returnedResponse.id == 0);
+
+    transport._responses[3] = resp;
+    assert(transport.receive(3, returnedResponse) == true,
+            "`receive` failed to return a received response.");
+    assert(returnedResponse.id == 3);
+
+    assert(transport.receive(3, returnedResponse) == false,
+            "`receive` did not remove a previously-returned response.");
+    assert(returnedResponse.id == 0);
 }
 
 /** TCP transport for RPC servers. */
-class TCPServerTransport : RPCServerTransport {
+class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP) {
     private:
 
     Socket _socket;

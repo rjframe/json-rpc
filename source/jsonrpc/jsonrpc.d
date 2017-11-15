@@ -6,17 +6,28 @@
 module jsonrpc.jsonrpc;
 
 import std.json;
+public import std.typecons : Yes, No;
+
+import jsonrpc.transport;
 import jsonrpc.exception;
 
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
+version(unittest) {
+    // We need a listening server to test the RPCClient.
+    auto makeServer(Funcs)(Funcs impl) {
+        //mixin("return new RPCServer!" ~ Funcs ~ "(new " ~ Funcs ~ `, "127.0.0.1", 54321);`);
+        return new RPCServer!Funcs(impl, "127.0.0.1", 54321);
+    }
+}
+
+alias ClientTransport = RPCClientTransport!(RPCRequest, RPCResponse);
+alias ServerTransport = RPCServerTransport!(RPCRequest, RPCResponse);
+
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
     import std.typecons : Flag;
-    public import std.typecons : Yes, No;
-
-    import jsonrpc.transport;
 
     private:
 
@@ -36,7 +47,7 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidParameterException if the json string is not a JSON Object or
+            InvalidArgumentException if the json string is not a JSON Object or
             array.
 
             std.json.JSONException if the json string cannot be parsed.
@@ -57,7 +68,7 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidParameterException if the json string is not a JSON Object or
+            InvalidArgumentException if the json string is not a JSON Object or
             array.
     */
     this(long id, string method, JSONValue params = JSONValue()) in {
@@ -148,14 +159,14 @@ struct RPCRequest {
             val =   A JSON Object or array.
 
         Throws:
-            InvalidParameterException if val is not a JSON Object or array.
+            InvalidArgumentException if val is not a JSON Object or array.
     */
     @property void params(JSONValue val)
     {
         // We consider null to be equivalent to an empty object.
         if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
                 && val.type != JSON_TYPE.NULL) {
-            raise!(InvalidParameterException, val)
+            raise!(InvalidArgumentException, val)
                     ("Invalid JSON-RPC method parameter type.");
         }
         _params = val;
@@ -169,7 +180,7 @@ struct RPCRequest {
             json =   A JSON string.
 
         Throws:
-            InvalidParameterException if the json string is not a JSON Object or
+            InvalidArgumentException if the json string is not a JSON Object or
             array.
 
             std.json.JSONException if the json string cannot be parsed.
@@ -192,14 +203,11 @@ unittest {
 
 /** The RPC server's response sent to clients. */
 struct RPCResponse {
-    private:
-
-    // Note: Only one of _result, _error will be present.
-    long _id;
-    JSONValue _result;
-
     package:
 
+    long _id;
+    // Note: Only one of _result, _error will be present.
+    JSONValue _result;
     Error _error;
 
     /** Construct a response to send to the client. */
@@ -299,6 +307,10 @@ struct RPCResponse {
             }
         }
     }
+
+    static RPCResponse fromJSONString(const char[] str) {
+        assert(0, "RPCResponse.fromString not implemented.");
+    }
 }
 
 /** Implementation of a JSON-RPC client.
@@ -310,16 +322,17 @@ Params:
             remote server.
 */
 class RPCClient(API) if (is(API == interface)) {
+    import jsonrpc.transport : RPCClientTransport, TCPClientTransport;
+
     private:
 
-    int _nextId;
-    // List of received but unused responses when making async calls.
-    RPCClientTransport _transport;
+    long _nextId;
+    ClientTransport _transport;
 
     public:
 
     /** Instantiate an RPCClient with the specified RPCClientTransport. */
-    this(RPCClientTransport transport) {
+    this(ClientTransport transport) {
         _transport = transport;
     }
 
@@ -332,7 +345,7 @@ class RPCClient(API) if (is(API == interface)) {
     this(string host, ushort port) in {
         assert(host.length > 0);
     } body {
-        _transport = new TCPRPCClientTransport(host, port);
+        _transport = new TCPClientTransport!(RPCRequest, RPCResponse)(host, port);
     }
 
     /** Make a non-blocking remote call with natural syntax.
@@ -376,31 +389,6 @@ class RPCClient(API) if (is(API == interface)) {
         return callAsync(apiFunc, jsonArgs);
     }
 
-    /+ TODO: ParameterIdentifierTuple - Get!2 recursive expansion for call to
-       `a` when this is in the RPCCLient. Outside the class template this isn't
-       a problem.
-
-    @test("Doctest: Remote function call syntax builds properly.")
-    // Note: opDispatch is not called, so we're not testing that function.
-    // Without doStuff, we would need a listening server for the test to pass;
-    // I don't want to document all of that here.
-    ///
-    unittest {
-        interface MyAPI {
-            bool x(int y);
-            void a(bool b, int c, string d);
-            int i();
-        }
-
-        void doStuff() {
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-            client.a(true, 2, "somestring");
-            client.x(3);
-            auto resp = client.i;
-        }
-    }
-    +/
-
     /** Make a blocking remote function call.
 
         Params:
@@ -412,21 +400,20 @@ class RPCClient(API) if (is(API == interface)) {
             std.json.JSONException if the string cannot be parsed as JSON.
 
         Returns: The server's response.
+
+        Example:
+            interface MyAPI { void func(int val); }
+            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+            auto resp = client.call("func", `{ "val": 3 }`);
+
+            import std.json : JSONValue;
+            auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
     */
     RPCResponse call(string func, string params) in {
         assert(func.length > 0);
     } body {
         return call(func, params.parseJSON);
-    }
-
-    @test("Doctest: client call example passing params via JSON string.")
-    // TODO: Will fail without listening server.
-    ///
-    unittest {
-        interface MyAPI { void func(int val); }
-        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-        auto resp = client.call("func", `{ "val": 3 }`);
     }
 
     /// ditto
@@ -439,15 +426,6 @@ class RPCClient(API) if (is(API == interface)) {
         return resp;
     }
 
-    // TODO: Will fail without listening server.
-    @test("Doctest: client call example passing params via JSONValue.")
-    ///
-    unittest {
-        interface MyAPI { void func(int val1, int val2, int val3); }
-        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-        auto resp = client.call("func", JSONValue([1 ,2, 3]));
-    }
 
     /** Make a non-blocking remote function call.
 
@@ -463,48 +441,30 @@ class RPCClient(API) if (is(API == interface)) {
 
         Returns: The ID of the request. This ID will be necessary to later
                  retrieve the server response.
+
+        Example:
+            interface MyAPI { void func(int val); }
+            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+            auto id = client.callAsync("func", `{ "val": 3 }`);
+            RPCResponse resp;
+            while (! client.response(id, resp)) { /+ wait for it... +/ }
+            // Do something with resp here.
     */
-    int callAsync(string func, string params) in {
+    long callAsync(string func, string params) in {
         assert(func.length > 0);
     } body {
         return callAsync(func, params.parseJSON);
     }
 
-    // TODO: Will fail without listening server.
-    @test("Doctest: client callAsync example passing params via JSON string.")
-    ///
-    unittest {
-        interface MyAPI { void func(int val); }
-        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-        auto id = client.callAsync("func", `{ "val": 3 }`);
-        RPCResponse resp;
-        while (! client.response(id, resp)) { /* wait for it... */ }
-        // Do something with resp here.
-    }
-
     /// ditto
-    int callAsync(string func, JSONValue params = JSONValue()) in {
+    long callAsync(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        auto req = new RPCRequest(_nextId, func, params);
+        auto req = RPCRequest(_nextId, func, params);
         _transport.send(req);
         ++_nextId;
-        return req.id;
-    }
-
-
-    // TODO: Will fail without listening server.
-    @test("Doctest: client callAsync example passing params via JSONValue.")
-    ///
-    unittest {
-        interface MyAPI { void func(int val1, int val2, int val3); }
-        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-        auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
-        RPCResponse resp;
-        while (! client.response(id, resp)) { /* wait for it... */ }
-        // Do something with resp here.
+        return req._id;
     }
 
     /** Check for a response from an asynchronous remote call.
@@ -553,7 +513,7 @@ class RPCServer(API) {
     private:
 
     API _api;
-    RCPServerTransport _transport;
+    ServerTransport _transport;
 
     public:
 
@@ -562,7 +522,7 @@ class RPCServer(API) {
         api =       The instantiated class or struct providing the RPC API.
         transport = The network transport to use.
     */
-    this(API api, RPCServerTransport transport) {
+    this(API api, ServerTransport transport) {
         _api = api;
         _transport = transport;
     }
@@ -574,14 +534,14 @@ class RPCServer(API) {
         port =  The port on which to listen.
     */
     this(API api, string host, ushort port) {
-        this(api, new TCPServerTransport(host, port));
+        this(api, new TCPServerTransport!(RPCRequest, RPCResponse)(host, port));
     }
 
-    /** Listen for connections.
-
-        Params:
-    */
+    /** Listen for connections. */
     void listen() { _transport.listen; }
+
+    /** Close all connections and clean up managed resources. */
+    void close() { _transport.close; }
 }
 
 /+
@@ -620,4 +580,64 @@ unittest {
     assert(two.removeWhitespace == "...");
     assert(three.removeWhitespace == "a");
     assert(four.removeWhitespace == "ab");
+}
+
+@test("RPCClient example: client call example passing params via JSON string.")
+// TODO: Will fail without listening server.
+unittest {
+    interface MyAPI { void func(int val); }
+    class MyImpl : MyAPI { void func(int val) { return; }}
+
+    auto server = makeServer!MyImpl(new MyImpl);
+    server.listen;
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+    auto resp = client.call("func", `{ "val": 3 }`);
+    auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
+}
+
+// TODO: Will fail without listening server.
+@test("RPCClient example: client callAsync example passing params via JSON string.")
+unittest {
+    interface MyAPI { void func(int val); }
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+    auto id = client.callAsync("func", `{ "val": 3 }`);
+    RPCResponse resp;
+    while (! client.response(id, resp)) { /* wait for it... */ }
+    // Do something with resp here.
+}
+
+// TODO: Will fail without listening server.
+@test("RPCClient example: client callAsync example passing params via JSONValue.")
+unittest {
+    interface MyAPI { void func(int val1, int val2, int val3); }
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+    auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
+    RPCResponse resp;
+    while (! client.response(id, resp)) { /* wait for it... */ }
+    // Do something with resp here.
+}
+
+@test("Test invalid data passed to RPCClient.params")
+// TODO: Fails without a listening server.
+unittest {
+    import std.exception : assertThrown;
+
+    interface MyAPI { void func(int val); }
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    client.func(3); // Should be no problem.
+
+    assertThrown!InvalidArgumentException(client.func(JSONValue(null)),
+            "Null parameter should not have been accepted.");
+
+    assertThrown!InvalidArgumentException(client.func(3),
+            "Scalar paremeter should not have been accepted.");
+
+    assertThrown!InvalidArgumentException(client.func("asdf"),
+            "String parameter should not have been accepted.");
+
+    assertThrown!InvalidArgumentException(client.callAsync("func", "asdf"),
+            "String parameter should not have been accepted by callAsync.");
 }
