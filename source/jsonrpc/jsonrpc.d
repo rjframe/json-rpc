@@ -309,7 +309,9 @@ struct RPCResponse {
     }
 
     static RPCResponse fromJSONString(const char[] str) {
-        assert(0, "RPCResponse.fromString not implemented.");
+        auto json = str.parseJSON;
+        // TODO: Parse error responses too.
+        return RPCResponse(json["id"].integer, json["result"]);
     }
 }
 
