@@ -40,21 +40,14 @@ version(unittest) {
             _blocking = byes;
         }
 
+        override @trusted void listen(int backlog) {}
+
         alias receive = Socket.receive;
         override @trusted ptrdiff_t receive(void[] buf) {
             if (buf.length == 0) return 0;
-            auto ret = receiveIt(cast(char*)buf.ptr, buf.length);
+            auto ret = fillBuffer(cast(char*)buf.ptr, buf.length);
             _receiveReturnValue = _receiveReturnValue[ret..$];
             return ret;
-        }
-
-        private @trusted ptrdiff_t receiveIt(char* ptr, size_t length) {
-            char[] p = ptr[0..length];
-            ptrdiff_t cnt;
-            for (cnt = 0; cnt < receiveReturnValue.length; ++cnt) {
-                ptr[cnt] = receiveReturnValue[cnt];
-            }
-            return cnt;
         }
 
         @test("FakeSocket.receive")
@@ -66,6 +59,20 @@ version(unittest) {
             auto len = s.receive(buf);
             assert(buf[0..len] == `{"id":3,"result":[1,2,3]}`,
                     "Incorrect data received: " ~ buf);
+        }
+
+        alias send = Socket.send;
+        override @trusted ptrdiff_t send(const(void)[] buf) {
+            return buf.length;
+        }
+
+        private @trusted ptrdiff_t fillBuffer(char* ptr, size_t length) {
+            char[] p = ptr[0..length];
+            ptrdiff_t cnt;
+            for (cnt = 0; cnt < receiveReturnValue.length; ++cnt) {
+                ptr[cnt] = receiveReturnValue[cnt];
+            }
+            return cnt;
         }
     }
 }
@@ -115,9 +122,9 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
     RESP[long] _responses;
     char[] _data; // = new char[](SocketBufSize);
 
-    /** Private constructor allows unittesting; we don't want sockets passed in
-        explicitly.
-    */
+    package:
+
+    /** For unittesting; we don't want sockets passed in explicitly. */
     this(Socket socket) {
         _socket = socket;
         _socket.blocking = false;
@@ -144,14 +151,33 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
                 ("Failed to send the entire request.");
     }
 
-    private void recvFromSocket() {
+    /** Check for and return a response from an asynchronous remote call.
+
+        Params:
+            id =       The ID of the request for which to check for a response.
+            response = An object in which to return the response if available.
+
+        Returns: true if the response is ready; otherwise, false.
+    */
+    bool receive(long id, out RESP response) {
+        addToResponses(receiveObjectFromStream); // TODO: On another thread/ use Tasks?
+
+        if (id in _responses) {
+            response = _responses[id];
+            _responses.remove(id);
+            return true;
+        }
+        return false;
+    }
+
+    private char[] receiveObjectFromStream() {
         char[SocketBufSize] buf;
         ptrdiff_t returnedBytes;
         do {
             returnedBytes = _socket.receive(buf);
-            if (returnedBytes > 0) _data ~= buf;
+            if (returnedBytes == 0) return _data;
+            else if (returnedBytes > 0) _data ~= buf;
         } while(returnedBytes > 0 && !Socket.ERROR);
-        if (returnedBytes == 0) return;
 
         // We know that we're receiving a JSON object, so we just need to count
         // '{' and '}' characters.
@@ -169,45 +195,41 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
             // object.
             _data = _data[1..$];
         } while (cnt > 0);
-
-        auto resp = RESP.fromJSONString(obj);
-        _responses[resp._id] = resp;
+        return obj;
     }
 
-    /** Check for and return a response from an asynchronous remote call.
-
-        Params:
-            id =       The ID of the request for which to check for a response.
-            response = An object in which to return the response if available.
-
-        Returns: true if the response is ready; otherwise, false.
-    */
-    bool receive(long id, out RESP response) {
-        recvFromSocket; // TODO: On another thread/ use Tasks?
-
-        if (id in _responses) {
-            response = _responses[id];
-            _responses.remove(id);
-            return true;
-        }
-        return false;
+    private void addToResponses(const char[] obj) {
+    // TODO: Should handle the case where multiple objects have been received.
+        auto resp = RESP.fromJSONString(obj);
+        _responses[resp._id] = resp;
+        assert(resp.id in _responses, "Object not added.");
     }
 }
 
-@test("recvFromSocket returns the bytestream as a JSON object.")
+@test("addToResponses converts the data stream to a JSON object.")
 unittest {
     import jsonrpc.jsonrpc;
     auto sock = new FakeSocket;
     auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
-    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
+    transport.addToResponses(`{"id":3,"result":[1,2,3]}`);
 
-    transport.recvFromSocket();
     assert(3 in transport._responses,
             "Response not saved in the transport.");
     assert(transport._responses[3]._id == 3,
             "Response didn't store the ID.");
     assert(transport._responses[3]._result == JSONValue([1,2,3]),
             "Response didn't store the data.");
+}
+
+@test("receiveObjectFromStream pulls a complete JSON string from the stream.")
+unittest {
+    import jsonrpc.jsonrpc;
+    auto sock = new FakeSocket;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
+    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
+
+    auto ret = transport.receiveObjectFromStream();
+    assert(ret == `{"id":3,"result":[1,2,3]}`, "Did not return object.");
 }
 
 @test("TCPClientTransport.receive returns the specified response if possible.")
@@ -237,7 +259,7 @@ unittest {
 
 /** TCP transport for RPC servers. */
 class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP) {
-    private:
+    package:
 
     Socket _socket;
 
