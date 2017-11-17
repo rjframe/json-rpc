@@ -15,10 +15,12 @@ version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
 version(unittest) {
+    import std.socket : Socket;
     // We need a listening server to test the RPCClient.
-    auto makeServer(Funcs)(Funcs impl) {
-        //mixin("return new RPCServer!" ~ Funcs ~ "(new " ~ Funcs ~ `, "127.0.0.1", 54321);`);
-        return new RPCServer!Funcs(impl, "127.0.0.1", 54321);
+    auto makeServer(Funcs)(Funcs impl, Socket sock) {
+        auto transport = new TCPServerTransport!(RPCRequest, RPCResponse)
+                (sock, "127.0.0.1", 54321);
+        return new RPCServer!Funcs(impl, transport);
     }
 }
 
@@ -311,7 +313,13 @@ struct RPCResponse {
     static RPCResponse fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         // TODO: Parse error responses too.
-        return RPCResponse(json["id"].integer, json["result"]);
+        if (json.type != JSON_TYPE.NULL && "id" in json && "result" in json) {
+            return RPCResponse(json["id"].integer, json["result"]);
+        } else {
+            raise!(InvalidDataReceivedException, str)
+                ("Response is missing 'id' and/or 'result' fields.");
+            assert(0);
+        }
     }
 }
 
@@ -584,33 +592,42 @@ unittest {
     assert(four.removeWhitespace == "ab");
 }
 
+/+
 @test("RPCClient example: client call example passing params via JSON string.")
-// TODO: Will fail without listening server.
+// TODO: Will hang without listening server.
 unittest {
     interface MyAPI { void func(int val); }
     class MyImpl : MyAPI { void func(int val) { return; }}
 
-    auto server = makeServer!MyImpl(new MyImpl);
-    server.listen;
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    //auto sock = new FakeSocket;
+    //auto server = makeServer!MyImpl(new MyImpl, sock);
+    //server.listen;
+
+    auto sock = new FakeSocket;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
+    //auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    auto client = new RPCClient!MyAPI(transport);
 
     auto resp = client.call("func", `{ "val": 3 }`);
     auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
 }
-
-// TODO: Will fail without listening server.
++/
+// TODO: Will hang without listening server.
 @test("RPCClient example: client callAsync example passing params via JSON string.")
 unittest {
     interface MyAPI { void func(int val); }
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    auto sock = new FakeSocket;
+    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
+    auto client = new RPCClient!MyAPI(transport);
 
     auto id = client.callAsync("func", `{ "val": 3 }`);
     RPCResponse resp;
     while (! client.response(id, resp)) { /* wait for it... */ }
     // Do something with resp here.
 }
-
-// TODO: Will fail without listening server.
+/+
+// TODO: Will hang without listening server.
 @test("RPCClient example: client callAsync example passing params via JSONValue.")
 unittest {
     interface MyAPI { void func(int val1, int val2, int val3); }
@@ -623,7 +640,7 @@ unittest {
 }
 
 @test("Test invalid data passed to RPCClient.params")
-// TODO: Fails without a listening server.
+// TODO: Hangs without a listening server.
 unittest {
     import std.exception : assertThrown;
 
@@ -643,3 +660,4 @@ unittest {
     assertThrown!InvalidArgumentException(client.callAsync("func", "asdf"),
             "String parameter should not have been accepted by callAsync.");
 }
++/

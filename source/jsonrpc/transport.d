@@ -160,6 +160,7 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool receive(long id, out RESP response) {
+        scope(failure) return false;
         addToResponses(receiveObjectFromStream); // TODO: On another thread/ use Tasks?
 
         if (id in _responses) {
@@ -232,9 +233,11 @@ unittest {
     assert(ret == `{"id":3,"result":[1,2,3]}`, "Did not return object.");
 }
 
-@test("TCPClientTransport.receive returns the specified response if possible.")
+@test("TCPClientTransport.receive returns false if response not present.")
 unittest {
+    import std.exception : assertThrown;
     import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
+
     auto sock = new FakeSocket;
     auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
 
@@ -244,9 +247,20 @@ unittest {
     assert(transport.receive(3, returnedResponse) == false,
             "`receive` returned a response it doesn't have.");
     assert(returnedResponse.id == 0);
+}
+
+@test("TCPClientTransport.receive returns the specified response if possible.")
+unittest {
+    import std.exception : assertThrown;
+    import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
+
+    auto sock = new FakeSocket;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
+
+    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
+    RPCResponse returnedResponse;
 
     auto resp = RPCResponse(3, `{"id":3,"result":[1,2,3]}`.parseJSON);
-    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
     transport._responses[3] = resp;
     assert(transport.receive(3, returnedResponse) == true,
             "`receive` failed to return a received response.");
