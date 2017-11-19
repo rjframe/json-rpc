@@ -218,19 +218,37 @@ struct RPCResponse {
     JSONValue _result;
     Error _error;
 
-    /** Construct a response to send to the client. */
+    /** Construct a response to send to the client.
+
+        Params:
+            id =        The ID of this response. This matches the relevant
+                        request.
+            result =    The return value(s) of the method executed.
+    */
     this(long id, JSONValue result) {
         _id = id;
         _result = result;
     }
 
-    /** Construct an error response to send to the client. */
+    /** Construct an error response to send to the client.
+
+        Params:
+            id =    The ID of this response. This matches the relevant request.
+            error = The error information to send.
+    */
     this(long id, Error error) {
         _id = id;
         _error = error;
     }
 
-    /** Construct a predefined error response to send to the client. */
+    /** Construct a predefined error response to send to the client.
+
+        An standard Error object matching the error code is constructed.
+
+        Params:
+            id =    The ID of this response. This matches the relevant request.
+            error = The error information to send.
+    */
     this(long id, ErrorCode error) {
         _id = id;
         _error = Error(error);
@@ -269,8 +287,13 @@ struct RPCResponse {
 
         public:
 
+        /** Retrieve the error code. */
         @property int errorCode() { return _errorCode; }
+
+        /** Retrieve the error message. */
         @property string message() { return _message; }
+
+        /** Retrieve the data related to the error. */
         @property JSONValue data() { return _data; }
 
         /** Construct an Error object to send to the RPC client.
@@ -316,7 +339,17 @@ struct RPCResponse {
         }
     }
 
-    static RPCResponse fromJSONString(const char[] str) {
+    /** Construct an RPCResponse from a JSON string.
+
+        Params:
+            str =   The string to convert to an RPCResponse object.
+
+        Throws:
+            std.json.JSONException if the string cannot be parsed as JSON.
+
+            InvalidDataReceivedException if the 'id' or 'result' field is missing.
+    */
+    static package RPCResponse fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         // TODO: Parse error responses too.
         if (json.type != JSON_TYPE.NULL && "id" in json && "result" in json) {
@@ -364,9 +397,9 @@ class RPCClient(API) if (is(API == interface)) {
         _transport = new TCPClientTransport!(RPCRequest, RPCResponse)(host, port);
     }
 
-    /** Make blocking remote call with natural syntax.
+    /** Make a blocking remote call with natural syntax.
 
-        Any function (not present on the RPC client itself) that is present in
+        Any method (not part of the RPC client itself) that is present in
         the remote API can be called as if it was a member of the RPC client,
         and that function call will be forwarded to the remote server.
 
@@ -436,7 +469,7 @@ class RPCClient(API) if (is(API == interface)) {
         }
     }
 
-    /** Make a blocking remote function call.
+    /** Make a function call on the RPC server.
 
         Params:
             func =   The name of the remote function to call.
@@ -454,7 +487,7 @@ class RPCClient(API) if (is(API == interface)) {
 
             import std.json : JSONValue;
             auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
-            auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
+            auto resp2 = client.call("func", JSONValue(3));
     */
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
@@ -523,24 +556,6 @@ class RPCClient(API) if (is(API == interface)) {
     +/
 }
 
-/+ TODO: We're running out of memory now trying to build this.
-@test("[not complete] RPCClient.opDispatch forwards calls to the server.")
-// TODO: I need to mock (reqs a new constructor) a server so we can actually
-// test opDispatch here.
-unittest {
-    interface MyAPI {
-        bool x(int y);
-        void a(bool b, int c, string d);
-        int i();
-    }
-
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-    client.a(true, 2, "somestring");
-    client.x(3);
-    auto resp = client.i;
-}
-+/
-
 /** Implementation of a JSON-RPC client.
 
     This implementation only supports communication via TCP sockets.
@@ -586,21 +601,19 @@ class RPCServer(API) {
     void close() { _transport.close; }
 }
 
-/+
-@test("Doctest: Start an RPCServer.")
+@test("[DOCTEST] Start an RPCServer.")
 ///
 unittest {
     class MyAPI {
         bool f() { return true; }
     }
 
-    auto server = new RPCServer!MyAPI(new MyAPI);
-    server.listen("127.0.0.1", 54321);
+    auto server = new RPCServer!MyAPI(new MyAPI, "127.0.0.1", 54321);
+    server.listen;
 }
-+/
 
 /** Remove all whitespace from a string. */
-string removeWhitespace(string input) {
+string removeWhitespace(const char[] input) {
     import std.array : appender;
     import std.uni : isWhite;
 
@@ -625,25 +638,6 @@ unittest {
 }
 
 /+
-@test("RPCClient example: client call example passing params via JSON string.")
-// TODO: Will hang without listening server.
-unittest {
-    interface MyAPI { void func(int val); }
-    class MyImpl : MyAPI { void func(int val) { return; }}
-
-    //auto sock = new FakeSocket;
-    //auto server = makeServer!MyImpl(new MyImpl, sock);
-    //server.listen;
-
-    auto sock = new FakeSocket;
-    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
-    //auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-    auto client = new RPCClient!MyAPI(transport);
-
-    auto resp = client.call("func", `{ "val": 3 }`);
-    auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
-}
-
 // TODO: Will hang without listening server.
 @test("RPCClient example: client callAsync example passing params via JSON string.")
 unittest {
@@ -714,4 +708,17 @@ unittest {
 
     rpc.func1;
     assert(rpc.func2(false, "hello") == 3);
+}
+
+@test("[DOCTEST] RPCClient example: call")
+unittest {
+    interface MyAPI { void func(int val); }
+    auto transport = new FakeTransport;
+    transport.fakedResponses[0] = RPCResponse(0, JSONValue());
+    transport.fakedResponses[1] = RPCResponse(1, JSONValue());
+    auto client = new RPCClient!MyAPI(transport);
+
+    import std.json : JSONValue;
+    auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
+    auto resp2 = client.call("func", JSONValue(3));
 }
