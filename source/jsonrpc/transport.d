@@ -252,7 +252,7 @@ unittest {
     assert(ret == `{"id":3,"result":[1,2,3]}`, "Did not return object.");
 }
 
-@test("TCPClientTransport.receive returns false if response not present.")
+@test("TCPClientTransport.receiveAsync returns false if response not present.")
 unittest {
     import std.exception : assertThrown;
     import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
@@ -268,7 +268,7 @@ unittest {
     assert(returnedResponse.id == 0);
 }
 
-@test("TCPClientTransport.receive returns the specified response if possible.")
+@test("TCPClientTransport.receiveAsync returns the specified response if possible.")
 unittest {
     import std.exception : assertThrown;
     import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
@@ -288,6 +288,18 @@ unittest {
     assert(transport.receiveAsync(3, returnedResponse) == false,
             "`receive` did not remove a previously-returned response.");
     assert(returnedResponse.id == 0);
+}
+
+@test("TCPClientTransport.receivereturns the specified response.")
+unittest {
+    import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
+
+    auto sock = new FakeSocket;
+    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
+    auto resp = RPCResponse(3, `{"id":3,"result":[1,2,3]}`.parseJSON);
+    transport._responses[3] = resp;
+
+    assert(transport.receive(3) == resp);
 }
 
 /** TCP transport for RPC servers. */
