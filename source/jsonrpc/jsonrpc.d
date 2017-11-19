@@ -15,12 +15,20 @@ version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
 version(unittest) {
-    import std.socket : Socket;
-    // We need a listening server to test the RPCClient.
-    auto makeServer(Funcs)(Funcs impl, Socket sock) {
-        auto transport = new TCPServerTransport!(RPCRequest, RPCResponse)
-                (sock, "127.0.0.1", 54321);
-        return new RPCServer!Funcs(impl, transport);
+    class FakeTransport : RPCClientTransport!(RPCRequest, RPCResponse) {
+        RPCResponse[long] fakedResponses;
+        override void send(RPCRequest req) {}
+
+        override bool receiveAsync(long id, out RPCResponse response) {
+            return false;
+        }
+
+        override RPCResponse receive(long id) {
+import std.stdio;
+            writeln("FakeTransport resp: ", fakedResponses[id]);
+            if (id in fakedResponses) return fakedResponses[id];
+            assert(0, "Fake blocking function doesn't have requested object.");
+        }
     }
 }
 
@@ -661,3 +669,24 @@ unittest {
             "String parameter should not have been accepted by callAsync.");
 }
 +/
+
+@test("[DOCTEST] RPCClient example: opDispatch")
+unittest {
+    interface RemoteFuncs {
+        void func1();
+        int func2(bool b, string s);
+    }
+
+    class Funcs : RemoteFuncs {
+        void func1() { return; }
+        int func2(bool b, string s) { return 3; }
+    }
+
+    auto transport = new FakeTransport;
+    transport.fakedResponses[0] = RPCResponse(0, JSONValue());
+    transport.fakedResponses[1] = RPCResponse(1, JSONValue(3));
+    auto rpc = new RPCClient!RemoteFuncs(transport);
+
+    rpc.func1;
+    assert(rpc.func2(false, "hello") == 3);
+}
