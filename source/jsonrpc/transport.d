@@ -80,6 +80,7 @@ version(unittest) {
 /** Interface that provides client transport functions. */
 interface RPCClientTransport(REQ, RESP)
         if (hasMember!(REQ, "_id") && hasMember!(REQ, "toJSONString")) {
+
     /** Send a request from a client to a server asynchronously.
 
         Params:
@@ -99,16 +100,19 @@ interface RPCClientTransport(REQ, RESP)
         Returns:
             true if the requested object is available; false otherwise.
     */
-    bool receive(long id, out RESP response);
+    bool receiveAsync(long id, out RESP response);
+
+    RESP receive(long id);
 }
 
 /** Interface that provides server transport functions. */
 interface RPCServerTransport(REQ, RESP)
         if (hasMember!(REQ, "_id") && hasMember!(RESP, "fromJSONString")) {
 
-        /** Tell a server to listen for incoming connections. */
+    /** Tell a server to listen for incoming connections. */
     void listen();
-    bool receive(long id, out REQ request);
+    bool receiveAsync(long id, out REQ request);
+    RESP receive(long id);
     void send(RESP response);
     /** Close all connections and clean up any managed resources. */
     void close();
@@ -124,10 +128,14 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
 
     package:
 
-    /** For unittesting; we don't want sockets passed in explicitly. */
+    /** Initialize a transport with the specified socket.
+
+        This socket will be set to a blocking socket.
+        This is for unittesting; we don't want sockets passed in explicitly.
+    */
     this(Socket socket) {
         _socket = socket;
-        _socket.blocking = false;
+        _socket.blocking = true;
     }
 
     public:
@@ -159,7 +167,8 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
 
         Returns: true if the response is ready; otherwise, false.
     */
-    bool receive(long id, out RESP response) {
+    bool receiveAsync(long id, out RESP response) {
+    /+ TODO: Reimplement receiveAsync.
         scope(failure) return false;
         addToResponses(receiveObjectFromStream); // TODO: On another thread/ use Tasks?
 
@@ -168,7 +177,17 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
             _responses.remove(id);
             return true;
         }
+    +/
         return false;
+    }
+
+    RESP receive(long id) {
+        while (! (id in _responses)) {
+            addToResponses(receiveObjectFromStream); // TODO: On another thread/ use Tasks?
+        }
+        auto response = _responses[id];
+        _responses.remove(id);
+        return response;
     }
 
     private char[] receiveObjectFromStream() {
@@ -244,7 +263,7 @@ unittest {
     sock.receiveReturnValue = "";
     RPCResponse returnedResponse;
 
-    assert(transport.receive(3, returnedResponse) == false,
+    assert(transport.receiveAsync(3, returnedResponse) == false,
             "`receive` returned a response it doesn't have.");
     assert(returnedResponse.id == 0);
 }
@@ -262,11 +281,11 @@ unittest {
 
     auto resp = RPCResponse(3, `{"id":3,"result":[1,2,3]}`.parseJSON);
     transport._responses[3] = resp;
-    assert(transport.receive(3, returnedResponse) == true,
+    assert(transport.receiveAsync(3, returnedResponse) == true,
             "`receive` failed to return a received response.");
     assert(returnedResponse.id == 3);
 
-    assert(transport.receive(3, returnedResponse) == false,
+    assert(transport.receiveAsync(3, returnedResponse) == false,
             "`receive` did not remove a previously-returned response.");
     assert(returnedResponse.id == 0);
 }
@@ -300,7 +319,11 @@ class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP) {
         _socket.listen(10);
     }
 
-    bool receive(long id, out REQ request) {
+    bool receiveAsync(long id, out REQ request) {
+        assert(0, "receiveAsync not implemented.");
+    }
+
+    RESP receive(long id) {
         assert(0, "receive not implemented.");
     }
 
