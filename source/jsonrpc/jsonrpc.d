@@ -24,8 +24,6 @@ version(unittest) {
         }
 
         override RPCResponse receive(long id) {
-import std.stdio;
-            writeln("FakeTransport resp: ", fakedResponses[id]);
             if (id in fakedResponses) return fakedResponses[id];
             assert(0, "Fake blocking function doesn't have requested object.");
         }
@@ -366,7 +364,7 @@ class RPCClient(API) if (is(API == interface)) {
         _transport = new TCPClientTransport!(RPCRequest, RPCResponse)(host, port);
     }
 
-    /** Make a non-blocking remote call with natural syntax.
+    /** Make blocking remote call with natural syntax.
 
         Any function (not present on the RPC client itself) that is present in
         the remote API can be called as if it was a member of the RPC client,
@@ -375,9 +373,26 @@ class RPCClient(API) if (is(API == interface)) {
         Params:
             args = The arguments of the remote function to call.
 
+        Returns:
+            The return value of the function call.
+
         Throws:
             InvalidArgumentException if the argument types do not match the
             remote interface.
+
+        Example:
+            interface RemoteFuncs {
+                void func1();
+                int func2(bool b, string s);
+            }
+
+            auto rpc = new RPCClient!MyAPI("127.0.0.1", 54321);
+            rpc.func1();
+            int retval = rpc.func2(false, "hello");
+
+        Notes:
+            If you want the full response from the server, use the `call`
+            function instead.
     */
     auto ref opDispatch(string apiFunc, ARGS...)(ARGS args) {
         import std.traits;
@@ -394,7 +409,8 @@ class RPCClient(API) if (is(API == interface)) {
             "alias paramTypes = AliasSeq!(Parameters!(API."
             ~ apiFunc ~ "));\n" ~
             "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
-            ~ apiFunc ~ "));\n"
+            ~ apiFunc ~ "));\n" ~
+            "alias returnType = ReturnType!(API." ~ apiFunc ~ ");\n"
         );
 
         auto jsonArgs = JSONValue();
@@ -404,7 +420,20 @@ class RPCClient(API) if (is(API == interface)) {
             mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
                     i.text ~ "]);");
         }
-        return callAsync(apiFunc, jsonArgs);
+
+        // TODO: Need to reconstruct arrays and AAs too.
+        auto returnVal = call(apiFunc, jsonArgs)._result;
+        static if (is(returnType: void)) {
+            return;
+        } else static if (isSigned!returnType) {
+            return cast(returnType)returnVal.integer;
+        } else static if (isUnsigned!returnType) {
+            return cast(returnType)returnVal.uinteger;
+        } else static if (isFloating!returnType) {
+            return cast(returnType)returnVal.floating;
+        } else static if (isSomeString!returnType) {
+            return cast(returnType)returnVal.str;
+        }
     }
 
     /** Make a blocking remote function call.
@@ -423,28 +452,20 @@ class RPCClient(API) if (is(API == interface)) {
             interface MyAPI { void func(int val); }
             auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-            auto resp = client.call("func", `{ "val": 3 }`);
-
             import std.json : JSONValue;
+            auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
             auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
     */
-    RPCResponse call(string func, string params) in {
-        assert(func.length > 0);
-    } body {
-        return call(func, params.parseJSON);
-    }
-
-    /// ditto
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        auto id = callAsync(func, params);
-        RPCResponse resp;
-        while(! response(id, resp)) {}
+        _transport.send(RPCRequest(_nextId, func, params));
+        auto resp = _transport.receive(_nextId);
+        ++_nextId;
         return resp;
     }
 
-
+    /+
     /** Make a non-blocking remote function call.
 
         Use the returned request ID to obtain the server's response.
@@ -484,7 +505,9 @@ class RPCClient(API) if (is(API == interface)) {
         ++_nextId;
         return req._id;
     }
+    +/
 
+    /+
     /** Check for a response from an asynchronous remote call.
 
         Params:
@@ -495,8 +518,9 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool response(long id, out RPCResponse response) {
-        return _transport.receive(id, response);
+        return _transport.receiveAsync(id, response);
     }
+    +/
 }
 
 /+ TODO: We're running out of memory now trying to build this.
@@ -619,7 +643,7 @@ unittest {
     auto resp = client.call("func", `{ "val": 3 }`);
     auto resp2 = client.call("func", JSONValue([1 ,2, 3]));
 }
-+/
+
 // TODO: Will hang without listening server.
 @test("RPCClient example: client callAsync example passing params via JSON string.")
 unittest {
@@ -634,6 +658,7 @@ unittest {
     while (! client.response(id, resp)) { /* wait for it... */ }
     // Do something with resp here.
 }
++/
 /+
 // TODO: Will hang without listening server.
 @test("RPCClient example: client callAsync example passing params via JSONValue.")
