@@ -103,19 +103,22 @@ interface RPCClientTransport(REQ, RESP)
     bool receiveAsync(long id, out RESP response);
 
     RESP receive(long id);
+
+    void close();
 }
 
 /** Interface that provides server transport functions. */
 interface RPCServerTransport(REQ, RESP)
         if (hasMember!(REQ, "_id") && hasMember!(RESP, "fromJSONString")) {
 
-    /** Tell a server to listen for incoming connections. */
-    void listen();
-    bool receiveAsync(long id, out REQ request);
-    RESP receive(long id);
-    void send(RESP response);
-    /** Close all connections and clean up any managed resources. */
-    void close();
+    /** Retrieve the specified request if available. */
+    bool receive(Socket socket, long id, out REQ request);
+    //bool receive(Client client, long id, out REQ request);
+
+    /** Send the response to the client. */
+    void send(Socket socket, RESP response);
+
+    void listen(int backlog);
 }
 
 /** TCP transport for RPC clients. */
@@ -123,7 +126,7 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
     private:
 
     Socket _socket;
-    RESP[long] _responses;
+    RESP[long] _activeResponses;
     char[] _data; // = new char[](SocketBufSize);
 
     package:
@@ -135,7 +138,7 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
     */
     this(Socket socket) {
         _socket = socket;
-        _socket.blocking = true;
+        _socket.blocking = false;
     }
 
     public:
@@ -182,14 +185,18 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
     }
 
     RESP receive(long id) {
-        while (! (id in _responses)) {
-            addToResponses(receiveObjectFromStream); // TODO: On another thread/ use Tasks?
+        assert(0, "receive not implemented.");
+        /*
+        while (! (id in _activeResponses)) {
+            addToResponses(receiveJSONObjectFromStream); // TODO: On another thread/ use Tasks?
         }
-        auto response = _responses[id];
-        _responses.remove(id);
+        auto response = _activeResponses[id];
+        _activeResponses.remove(id);
         return response;
+        */
     }
 
+    /+ Pulled outside of class to share.
     private char[] receiveObjectFromStream() {
         char[SocketBufSize] buf;
         ptrdiff_t returnedBytes;
@@ -217,12 +224,15 @@ class TCPClientTransport(REQ, RESP) : RPCClientTransport!(REQ, RESP) {
         } while (cnt > 0);
         return obj;
     }
+    +/
+
+    void close() { _socket.close; }
 
     private void addToResponses(const char[] obj) {
     // TODO: Should handle the case where multiple objects have been received.
         auto resp = RESP.fromJSONString(obj);
-        _responses[resp._id] = resp;
-        assert(resp.id in _responses, "Object not added.");
+        _activeResponses[resp._id] = resp;
+        assert(resp.id in _activeResponses, "Object not added.");
     }
 }
 
@@ -233,11 +243,11 @@ unittest {
     auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
     transport.addToResponses(`{"id":3,"result":[1,2,3]}`);
 
-    assert(3 in transport._responses,
+    assert(3 in transport._activeResponses,
             "Response not saved in the transport.");
-    assert(transport._responses[3]._id == 3,
+    assert(transport._activeResponses[3]._id == 3,
             "Response didn't store the ID.");
-    assert(transport._responses[3]._result == JSONValue([1,2,3]),
+    assert(transport._activeResponses[3]._result == JSONValue([1,2,3]),
             "Response didn't store the data.");
 }
 
@@ -245,10 +255,9 @@ unittest {
 unittest {
     import jsonrpc.jsonrpc;
     auto sock = new FakeSocket;
-    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
     sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
 
-    auto ret = transport.receiveObjectFromStream();
+    auto ret = receiveJSONObjectFromStream(sock);
     assert(ret == `{"id":3,"result":[1,2,3]}`, "Did not return object.");
 }
 
@@ -280,7 +289,7 @@ unittest {
     RPCResponse returnedResponse;
 
     auto resp = RPCResponse(3, `{"id":3,"result":[1,2,3]}`.parseJSON);
-    transport._responses[3] = resp;
+    transport._activeResponses[3] = resp;
     assert(transport.receiveAsync(3, returnedResponse) == true,
             "`receive` failed to return a received response.");
     assert(returnedResponse.id == 3);
@@ -290,28 +299,37 @@ unittest {
     assert(returnedResponse.id == 0);
 }
 
-@test("TCPClientTransport.receivereturns the specified response.")
+@test("TCPClientTransport.receive returns the specified response.")
 unittest {
     import jsonrpc.jsonrpc : RPCRequest, RPCResponse;
 
     auto sock = new FakeSocket;
     auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
     auto resp = RPCResponse(3, `{"id":3,"result":[1,2,3]}`.parseJSON);
-    transport._responses[3] = resp;
+    transport._activeResponses[3] = resp;
 
     assert(transport.receive(3) == resp);
 }
 
 /** TCP transport for RPC servers. */
-class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP) {
+class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP)
+        if (hasMember!(REQ, "fromJSONString")) {
+    private:
+
+    Client!REQ[] _activeClients;
+
     package:
 
-    Socket _socket;
+    Socket _listener;
 
+    /** Instantiate a TCPServerTransport with the provided socket.
+
+        The socket will be set to blocking; this is designed for use with tests.
+    */
     this(Socket socket, string host, ushort port) {
-        _socket = socket;
-        _socket.blocking = false;
-        _socket.bind(getAddress(host, port)[0]);
+        _listener = socket;
+        _listener.blocking = false;
+        _listener.bind(getAddress(host, port)[0]);
     }
 
     public:
@@ -326,23 +344,124 @@ class TCPServerTransport(REQ, RESP) : RPCServerTransport!(REQ, RESP) {
         this(new TcpSocket, host, port);
     }
 
-    /** Begin listening for client requests. */
-    void listen() {
-        _socket.listen(10);
+    /** Listen for and handle client requests.
+
+        This method is your application's event loop -- it does not return.
+
+        Params:
+            backlog =   The number of sockets that can be queued prior to
+                        connecting.
+    */
+    // TODO: Listen for a signal and exit cleanly.
+    void listen(int backlog, function execMethod(REQ)) {
+        import std.stdio;writeln("listening...");
+        _listener.listen(backlog);
+
+        while(true) {
+            writeln("processing new clients");
+            processNewClients;
+            foreach (client; _activeClients) {
+                writeln("receiving from client: ", client);
+                receive(client.socket);
+                foreach (request; client.activeRequests.byKeyValue) {
+                    import std.stdio;
+                    writeln("receiving request: ", request);
+                    auto response = execMethod(request);
+                    send(client.socket, request.value.executeMethod);
+                    client.activeRequests.remove(request.key);
+                }
+            }
+        }
     }
 
-    bool receiveAsync(long id, out REQ request) {
-        assert(0, "receiveAsync not implemented.");
+    /** Check for an accept new client connections. */
+    private void processNewClients() {
+        try {
+            Client!REQ client;
+            client.socket = _listener.accept;
+            _activeClients ~= client;
+        } catch (SocketAcceptException ex) {
+            // TODO: Log to stderr. Do not rethrow.
+            throw ex;
+        }
     }
 
-    RESP receive(long id) {
-        assert(0, "receive not implemented.");
+    /** Execute the requested method and return the server's response. */
+    private RESP executeMethod(REQ request) {
+        assert(0, "Implement executeMethod.");
     }
 
-    void send(RESP response) {
-        assert(0, "send not implemented.");
+    /** Receive requests from the specified client.
+
+        You should not need to call this directly; use `listen` instead.
+
+        Notes:
+            This is part of the public interface so that if you inherit from it,
+            you should be able to override `send` and `receive` without needing
+            to override `listen`.
+
+            If that theory does not pan out, this may become part of the private
+            implementation in the future.
+    */
+    void receive(Socket socket client) {
+        import std.stdio;writeln("in receive");
+        auto data = receiveJSONObjectFromStream(client.socket);
+        if (data.length > 0) {
+            auto req = REQ.fromJSONString(data);
+            client.activeRequests[req.id] = req;
+        }
+        return;
     }
 
-    /** End all connections and shut down the socket. */
-    void close() { _socket.close; }
+    /** Send a response to the specified client.
+
+        You should not need to call this directly; use `listen` instead.
+
+        Notes:
+            This is part of the public interface so that if you inherit from it,
+            you should be able to override `send` and `receive` without needing
+            to override `listen`.
+
+            If that theory does not pan out, this may become part of the private
+            implementation in the future.
+    */
+    void send(Socket socket, RESP response) {
+        assert(0);
+    }
+}
+
+/** Receive a bytestream from the socket and return a JSON string.
+
+    Params:
+        socket =    The socket that received data from the client.
+
+    Throws:
+        InvalidDataReceivedException if the object is known not to be a JSON
+        object. Note that the only validation is counting braces.
+*/
+private char[] receiveJSONObjectFromStream(Socket socket) {
+    char[] data; // = new char[](SocketBufSize);
+    char[SocketBufSize] buf;
+    ptrdiff_t returnedBytes;
+
+    do {
+        returnedBytes = socket.receive(buf);
+        if (returnedBytes > 0) data ~= buf[0..returnedBytes];
+    } while(returnedBytes > 0);
+    if (data.length == 0) return data;
+
+    // We know that we're receiving a JSON object, so we just need to count
+    // '{' and '}' characters.
+    int cnt = 0;
+    if (data[0] != '{') raise!(InvalidDataReceivedException)
+        ("Expected to receive a '{' to begin a new JSON object.");
+
+    char[] obj; // TODO: make this an appender.
+    do {
+        if (data[0] == '{') ++cnt;
+        else if (data[0] == '}') --cnt;
+        obj ~= data[0];
+        data = data[1..$];
+    } while (cnt > 0);
+    return obj;
 }

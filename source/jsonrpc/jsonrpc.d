@@ -27,6 +27,9 @@ version(unittest) {
             if (id in fakedResponses) return fakedResponses[id];
             assert(0, "Fake blocking function doesn't have requested object.");
         }
+
+        // TODO: Won't compile without overriding. Why?
+        override void close() {}
     }
 }
 
@@ -148,6 +151,9 @@ struct RPCRequest {
     /** The JSON-RPC protocol version. */
     @property string protocolVersion() { return "2.0"; }
 
+    /** The ID of this request. */
+    @property long id() { return _id; }
+
     /** Retrieve the method to execute on the RPC server. */
     @property string method() { return _method; }
 
@@ -197,6 +203,20 @@ struct RPCRequest {
         assert(json.length > 0);
     } body {
         params(json.parseJSON);
+    }
+
+    static package RPCRequest fromJSONString(const char[] str) {
+        assert(0, "fromJSONString not implemented.");
+        /*
+        auto json = str.parseJSON;
+        if (json.type != JSON_TYPE.NULL && "id" in json && "params" in json) {
+            return RPCResponse(json["id"].integer, json["params"]);
+        } else {
+            raise!(InvalidDataReceivedException, str)
+                ("Response is missing 'id' and/or 'params' fields.");
+            assert(0);
+        }
+        */
     }
 }
 
@@ -595,11 +615,18 @@ class RPCServer(API) {
     }
 
     /** Listen for connections. */
-    void listen() { _transport.listen; }
+    void listen(int maxQueuedConnections = 100) {
+        _transport.listen(maxQueuedConnections);
+    }
 
-    /** Close all connections and clean up managed resources. */
-    void close() { _transport.close; }
+    RPCResponse executeMethod(RPCRequest) {
+    }
 }
+
+    struct Client(REQ) {
+        Socket socket;
+        REQ[long] activeRequests;
+    }
 
 @test("[DOCTEST] Start an RPCServer.")
 ///
