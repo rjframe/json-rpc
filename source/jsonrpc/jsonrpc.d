@@ -6,35 +6,15 @@
 module jsonrpc.jsonrpc;
 
 import std.json;
+import std.socket;
 public import std.typecons : Yes, No;
 
-import jsonrpc.transport;
 import jsonrpc.exception;
 
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
-version(unittest) {
-    class FakeTransport : RPCClientTransport!(RPCRequest, RPCResponse) {
-        RPCResponse[long] fakedResponses;
-        override void send(RPCRequest req) {}
-
-        override bool receiveAsync(long id, out RPCResponse response) {
-            return false;
-        }
-
-        override RPCResponse receive(long id) {
-            if (id in fakedResponses) return fakedResponses[id];
-            assert(0, "Fake blocking function doesn't have requested object.");
-        }
-
-        // TODO: Won't compile without overriding. Why?
-        override void close() {}
-    }
-}
-
-alias ClientTransport = RPCClientTransport!(RPCRequest, RPCResponse);
-alias ServerTransport = RPCServerTransport!(RPCRequest, RPCResponse);
+enum SocketBufSize = 4096;
 
 /** An RPC request constructed by the client to send to the RPC server. */
 struct RPCRequest {
@@ -47,6 +27,16 @@ struct RPCRequest {
     string _method;
 
     package:
+
+    @test("Test RPCRequest constructor.")
+    unittest {
+        auto req1 = new RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
+        auto req2 = new RPCRequest(2, "some_method", `["abc", "def"]`);
+        auto req3 = new RPCRequest(2, "some_method", JSONValue(123));
+        auto json = JSONValue([1, 2, 3]);
+        auto req4 = new RPCRequest(3, "some_method", json);
+        auto req5 = new RPCRequest(4, "some_method");
+    }
 
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
@@ -93,7 +83,7 @@ struct RPCRequest {
     /** Convert the RPCRequest to a JSON string to pass to the server.
 
         Params:
-            prettyPrint =   Yes/no flag to control presentation of the JSON.
+            prettyPrint =   Yes/No flag to control presentation of the JSON.
     */
     string toJSONString(Flag!"prettyPrint" prettyPrint = No.prettyPrint) {
         import std.format : format;
@@ -167,21 +157,15 @@ struct RPCRequest {
 
     /** Set the parameters to the remote method that will be called.
 
-        The JSONValue must be an Object or Array.
-
         Params:
-            val =   A JSON Object or array.
-
-        Throws:
-            InvalidArgumentException if val is not a JSON Object or array.
+            val =   A JSON Object or array. Other value types will be wrapped
+                    in an array (e.g., 3 becomes [3]).
     */
     @property void params(JSONValue val)
     {
-        // We consider null to be equivalent to an empty object.
         if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
                 && val.type != JSON_TYPE.NULL) {
-            raise!(InvalidArgumentException, val)
-                    ("Invalid JSON-RPC method parameter type.");
+            _params = JSONValue([val]);
         }
         _params = val;
     }
@@ -218,15 +202,6 @@ struct RPCRequest {
         }
         */
     }
-}
-
-@test("Test RPCRequest constructor.")
-unittest {
-    auto req1 = new RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
-    auto req2 = new RPCRequest(2, "some_method", `["abc", "def"]`);
-    auto json = JSONValue([1, 2, 3]);
-    auto req3 = new RPCRequest(3, "some_method", json);
-    auto req4 = new RPCRequest(4, "some_method");
 }
 
 /** The RPC server's response sent to clients. */
@@ -391,19 +366,22 @@ Params:
             remote server.
 */
 class RPCClient(API) if (is(API == interface)) {
-    import jsonrpc.transport : RPCClientTransport, TCPClientTransport;
-
     private:
 
     long _nextId;
-    ClientTransport _transport;
+    Socket _socket;
+    RPCResponse[long] _activeResponses;
+
+    /** Instantiate an RPCClient with the specified Socket.
+
+        The socket will be set to non-blocking. This is designed for testing.
+    */
+    this(Socket socket) {
+        socket.blocking = false;
+        _socket = socket;
+    }
 
     public:
-
-    /** Instantiate an RPCClient with the specified RPCClientTransport. */
-    this(ClientTransport transport) {
-        _transport = transport;
-    }
 
     /** Instantiate an RPCClient bound to the specified host via a TCP connection.
 
@@ -414,7 +392,8 @@ class RPCClient(API) if (is(API == interface)) {
     this(string host, ushort port) in {
         assert(host.length > 0);
     } body {
-        _transport = new TCPClientTransport!(RPCRequest, RPCResponse)(host, port);
+        _socket = new TcpSocket(getAddress(host, port)[0]);
+        _socket.blocking = false;
     }
 
     /** Make a blocking remote call with natural syntax.
@@ -509,16 +488,22 @@ class RPCClient(API) if (is(API == interface)) {
             auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
             auto resp2 = client.call("func", JSONValue(3));
     */
+    // TODO: Include an optional timeout.
+    // TODO: Experiment w/ sleep value. Make it a parameter?
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        _transport.send(RPCRequest(_nextId, func, params));
-        auto resp = _transport.receive(_nextId);
-        ++_nextId;
+        import core.thread : Thread;
+        import core.time : dur;
+
+        auto id = callAsync(func, params);
+        RPCResponse resp;
+        while (! response(id, resp)) {
+            Thread.sleep(dur!"nsecs"(100));
+        }
         return resp;
     }
 
-    /+
     /** Make a non-blocking remote function call.
 
         Use the returned request ID to obtain the server's response.
@@ -554,13 +539,16 @@ class RPCClient(API) if (is(API == interface)) {
         assert(func.length > 0);
     } body {
         auto req = RPCRequest(_nextId, func, params);
-        _transport.send(req);
+        auto data = req.toJSONString;
+        auto len = _socket.send(data);
+        if (len != data.length)
+                raise!(FailedToSendDataException, len, data)
+                ("Failed to send the entire request.");
+
         ++_nextId;
         return req._id;
     }
-    +/
 
-    /+
     /** Check for a response from an asynchronous remote call.
 
         Params:
@@ -571,12 +559,29 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool response(long id, out RPCResponse response) {
-        return _transport.receiveAsync(id, response);
+        addToResponses(receiveJSONObjectFromStream(_socket));
+        if (id in _activeResponses) {
+            response = _activeResponses[id];
+            return true;
+        }
+        return false;
     }
-    +/
+
+    private void addToResponses(const char[] obj) {
+    // TODO: Should handle the case where multiple objects have been received.
+        if (obj.length == 0) return;
+        auto resp = RPCResponse.fromJSONString(obj);
+        _activeResponses[resp._id] = resp;
+        assert(resp.id in _activeResponses, "Object not added.");
+    }
 }
 
-/** Implementation of a JSON-RPC client.
+struct Client {
+    Socket socket;
+    RPCRequest[long] activeRequests;
+}
+
+/** Implementation of a JSON-RPC server.
 
     This implementation only supports communication via TCP sockets.
 
@@ -590,19 +595,36 @@ class RPCServer(API) {
     private:
 
     API _api;
-    ServerTransport _transport;
-
-    public:
+    Socket _listener;
+    Client[] _activeClients;
 
     /** Construct an RPCServer!API object.
 
         api =       The instantiated class or struct providing the RPC API.
         transport = The network transport to use.
     */
-    this(API api, ServerTransport transport) {
+    this(API api, Socket socket, string host, ushort port) {
         _api = api;
-        _transport = transport;
+        _listener = socket;
+        _listener.blocking = false;
+        _listener.bind(getAddress(host, port)[0]);
     }
+
+    public:
+
+    /** Construct an RPCServer!API object to communicate via TCP sockets.
+
+        The API must be constructable via a default constructor; if you need to
+        use an alternate constructor, create it first and pass it to the
+        RPCServer via a `this` overload.
+
+        host =  The host interface on which to listen.
+        port =  The port on which to listen.
+    */
+    this(string host, ushort port) {
+        this(new API(), new TcpSocket, host, port);
+    }
+
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
 
@@ -611,32 +633,97 @@ class RPCServer(API) {
         port =  The port on which to listen.
     */
     this(API api, string host, ushort port) {
-        this(api, new TCPServerTransport!(RPCRequest, RPCResponse)(host, port));
+        this(api, new TcpSocket, host, port);
     }
 
     /** Listen for connections. */
     void listen(int maxQueuedConnections = 100) {
-        _transport.listen(maxQueuedConnections);
+        import std.stdio;writeln("listening...");
+        _listener.listen(maxQueuedConnections);
+
+        while(true) {
+            writeln("processing new clients");
+            processNewClients;
+            writeln("clients: ", _activeClients);
+            foreach (client; _activeClients) {
+                writeln("receiving from client: ", client);
+                receive(client);
+                foreach (request; client.activeRequests.byKeyValue) {
+                    import std.stdio;
+                    writeln("receiving request: ", request);
+                    send(client.socket, executeMethod(request.value));
+                    client.activeRequests.remove(request.key);
+                }
+            }
+        }
     }
 
-    RPCResponse executeMethod(RPCRequest) {
+    void send(Socket socket, RPCResponse response) {
+        assert(0, "Implement RPCServer.send.");
+    }
+
+    /** Receive requests from the specified client.
+    */
+    private void receive(Client client) {
+        auto data = receiveJSONObjectFromStream(client.socket);
+        if (data.length > 0) {
+            auto req = RPCRequest.fromJSONString(data);
+            client.activeRequests[req.id] = req;
+        }
+        return;
+    }
+
+    /** Check for an accept new client connections. */
+    private void processNewClients() {
+        try {
+            Client client;
+            client.socket = _listener.accept;
+            if (client.socket !is Socket.init) _activeClients ~= client;
+        } catch (SocketAcceptException ex) {
+            // TODO: Log to stderr. Do not rethrow.
+            throw ex;
+        }
+    }
+
+    private RPCResponse executeMethod(RPCRequest) {
+        assert(0, "Implement executeMethod.");
     }
 }
 
-    struct Client(REQ) {
-        Socket socket;
-        REQ[long] activeRequests;
-    }
+/** Receive a bytestream from the socket and return a JSON string.
 
-@test("[DOCTEST] Start an RPCServer.")
-///
-unittest {
-    class MyAPI {
-        bool f() { return true; }
-    }
+    Params:
+        socket =    The socket that received data from the client.
 
-    auto server = new RPCServer!MyAPI(new MyAPI, "127.0.0.1", 54321);
-    server.listen;
+    Throws:
+        InvalidDataReceivedException if the object is known not to be a JSON
+        object. Note that the only validation is counting braces.
+*/
+private char[] receiveJSONObjectFromStream(Socket socket) {
+    char[] data; // = new char[](SocketBufSize);
+    char[SocketBufSize] buf;
+    ptrdiff_t returnedBytes;
+
+    do {
+        returnedBytes = socket.receive(buf);
+        if (returnedBytes > 0) data ~= buf[0..returnedBytes];
+    } while(returnedBytes > 0);
+    if (data.length == 0) return data;
+
+    // We know that we're receiving a JSON object, so we just need to count
+    // '{' and '}' characters.
+    int cnt = 0;
+    if (data[0] != '{') raise!(InvalidDataReceivedException)
+        ("Expected to receive a '{' to begin a new JSON object.");
+
+    char[] obj; // TODO: make this an appender.
+    do {
+        if (data[0] == '{') ++cnt;
+        else if (data[0] == '}') --cnt;
+        obj ~= data[0];
+        data = data[1..$];
+    } while (cnt > 0);
+    return obj;
 }
 
 /** Remove all whitespace from a string. */
@@ -664,57 +751,65 @@ unittest {
     assert(four.removeWhitespace == "ab");
 }
 
-/+
-// TODO: Will hang without listening server.
-@test("RPCClient example: client callAsync example passing params via JSON string.")
-unittest {
-    interface MyAPI { void func(int val); }
-    auto sock = new FakeSocket;
-    sock.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
-    auto transport = new TCPClientTransport!(RPCRequest, RPCResponse)(sock);
-    auto client = new RPCClient!MyAPI(transport);
+version(unittest) {
+    class FakeSocket : Socket {
+        private bool _blocking;
+        private char[] _receiveReturnValue =
+                cast(char[])`{"id":3,"result":[1,2,3]}`;
 
-    auto id = client.callAsync("func", `{ "val": 3 }`);
-    RPCResponse resp;
-    while (! client.response(id, resp)) { /* wait for it... */ }
-    // Do something with resp here.
+        @property receiveReturnValue(string s) {
+            _receiveReturnValue = cast(char[])s;
+        }
+
+        @property char[] receiveReturnValue() { return _receiveReturnValue; }
+
+        override void bind(Address addr) {
+        }
+
+        override const nothrow @nogc @property @trusted bool blocking() {
+            return _blocking;
+        }
+
+        override @property @trusted void blocking(bool byes) {
+            _blocking = byes;
+        }
+
+        override @trusted void listen(int backlog) {}
+
+        alias receive = Socket.receive;
+        override @trusted ptrdiff_t receive(void[] buf) {
+            if (buf.length == 0) return 0;
+            auto ret = fillBuffer(cast(char*)buf.ptr, buf.length);
+            _receiveReturnValue = _receiveReturnValue[ret..$];
+            return ret;
+        }
+
+        @test("FakeSocket.receive")
+        unittest {
+            auto s = new FakeSocket;
+            char[] buf = new char[](SocketBufSize);
+            s.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
+
+            auto len = s.receive(buf);
+            assert(buf[0..len] == `{"id":3,"result":[1,2,3]}`,
+                    "Incorrect data received: " ~ buf);
+        }
+
+        alias send = Socket.send;
+        override @trusted ptrdiff_t send(const(void)[] buf) {
+            return buf.length;
+        }
+
+        private @trusted ptrdiff_t fillBuffer(char* ptr, size_t length) {
+            char[] p = ptr[0..length];
+            ptrdiff_t cnt;
+            for (cnt = 0; cnt < receiveReturnValue.length; ++cnt) {
+                ptr[cnt] = receiveReturnValue[cnt];
+            }
+            return cnt;
+        }
+    }
 }
-+/
-/+
-// TODO: Will hang without listening server.
-@test("RPCClient example: client callAsync example passing params via JSONValue.")
-unittest {
-    interface MyAPI { void func(int val1, int val2, int val3); }
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-    auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
-    RPCResponse resp;
-    while (! client.response(id, resp)) { /* wait for it... */ }
-    // Do something with resp here.
-}
-
-@test("Test invalid data passed to RPCClient.params")
-// TODO: Hangs without a listening server.
-unittest {
-    import std.exception : assertThrown;
-
-    interface MyAPI { void func(int val); }
-    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-    client.func(3); // Should be no problem.
-
-    assertThrown!InvalidArgumentException(client.func(JSONValue(null)),
-            "Null parameter should not have been accepted.");
-
-    assertThrown!InvalidArgumentException(client.func(3),
-            "Scalar paremeter should not have been accepted.");
-
-    assertThrown!InvalidArgumentException(client.func("asdf"),
-            "String parameter should not have been accepted.");
-
-    assertThrown!InvalidArgumentException(client.callAsync("func", "asdf"),
-            "String parameter should not have been accepted by callAsync.");
-}
-+/
 
 @test("[DOCTEST] RPCClient example: opDispatch")
 unittest {
@@ -728,24 +823,62 @@ unittest {
         int func2(bool b, string s) { return 3; }
     }
 
-    auto transport = new FakeTransport;
-    transport.fakedResponses[0] = RPCResponse(0, JSONValue());
-    transport.fakedResponses[1] = RPCResponse(1, JSONValue(3));
-    auto rpc = new RPCClient!RemoteFuncs(transport);
+    auto sock = new FakeSocket;
+    auto rpc = new RPCClient!RemoteFuncs(sock);
 
+    sock.receiveReturnValue = `{"id":0,"result":null}`;
     rpc.func1;
+    sock.receiveReturnValue = `{"id":1,"result":3}`;
     assert(rpc.func2(false, "hello") == 3);
 }
 
 @test("[DOCTEST] RPCClient example: call")
 unittest {
     interface MyAPI { void func(int val); }
-    auto transport = new FakeTransport;
-    transport.fakedResponses[0] = RPCResponse(0, JSONValue());
-    transport.fakedResponses[1] = RPCResponse(1, JSONValue());
-    auto client = new RPCClient!MyAPI(transport);
+    auto sock = new FakeSocket;
+    auto client = new RPCClient!MyAPI(sock);
 
     import std.json : JSONValue;
+    sock.receiveReturnValue = `{"id":0,"result":null}`;
     auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
+    sock.receiveReturnValue = `{"id":1,"result":null}`;
     auto resp2 = client.call("func", JSONValue(3));
 }
+
+@test("[DOCTEST] RPCClient example: callAsync passing params via JSON string.")
+unittest {
+    interface MyAPI { void func(int val); }
+    auto sock = new FakeSocket;
+    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    auto client = new RPCClient!MyAPI(sock);
+
+    auto id = client.callAsync("func", `{ "val": 3 }`);
+    RPCResponse resp;
+    while (! client.response(id, resp)) { /* wait for it... */ }
+}
+
+@test("[DOCTEST] RPCClient : callAsync passing params via JSONValue.")
+unittest {
+    interface MyAPI { void func(int val1, int val2, int val3); }
+    auto sock = new FakeSocket;
+    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    auto client = new RPCClient!MyAPI(sock);
+
+    auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
+    RPCResponse resp;
+    while (! client.response(id, resp)) { /* wait for it... */ }
+    // Do something with resp here.
+}
+
+/+ TODO - fake socket to accept client.
+@test("[DOCTEST] Start an RPCServer.")
+///
+unittest {
+    class MyAPI {
+        bool f() { return true; }
+    }
+
+    auto server = new RPCServer!MyAPI(new MyAPI, "127.0.0.1", 54321);
+    server.listen;
+}
++/
