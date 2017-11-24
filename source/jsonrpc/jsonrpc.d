@@ -190,17 +190,17 @@ struct RPCRequest {
     }
 
     static package RPCRequest fromJSONString(const char[] str) {
-        assert(0, "fromJSONString not implemented.");
-        /*
         auto json = str.parseJSON;
-        if (json.type != JSON_TYPE.NULL && "id" in json && "params" in json) {
-            return RPCResponse(json["id"].integer, json["params"]);
+        if (json.type != JSON_TYPE.NULL && "id" in json && "method" in json) {
+            if ("params" !in json) json["params"] = JSONValue();
+            return RPCRequest(json["id"].integer,
+                    json["method"].str,
+                    json["params"]);
         } else {
             raise!(InvalidDataReceivedException, str)
-                ("Response is missing 'id' and/or 'params' fields.");
+                ("Response is missing 'id' and/or 'method' fields.");
             assert(0);
         }
-        */
     }
 }
 
@@ -559,7 +559,11 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool response(long id, out RPCResponse response) {
-        addToResponses(receiveJSONObjectFromStream(_socket));
+        auto data = receiveDataFromStream(_socket);
+        while (data.length > 0) {
+            addToResponses(data.takeJSONObject);
+        }
+
         if (id in _activeResponses) {
             response = _activeResponses[id];
             return true;
@@ -568,7 +572,6 @@ class RPCClient(API) if (is(API == interface)) {
     }
 
     private void addToResponses(const char[] obj) {
-    // TODO: Should handle the case where multiple objects have been received.
         if (obj.length == 0) return;
         auto resp = RPCResponse.fromJSONString(obj);
         _activeResponses[resp._id] = resp;
@@ -579,6 +582,10 @@ class RPCClient(API) if (is(API == interface)) {
 struct Client {
     Socket socket;
     RPCRequest[long] activeRequests;
+
+    this(ref Socket socket) {
+        this.socket = socket;
+    }
 }
 
 /** Implementation of a JSON-RPC server.
@@ -596,7 +603,7 @@ class RPCServer(API) {
 
     API _api;
     Socket _listener;
-    Client[] _activeClients;
+    Client[Socket] _activeClients;
 
     /** Construct an RPCServer!API object.
 
@@ -606,8 +613,9 @@ class RPCServer(API) {
     this(API api, Socket socket, string host, ushort port) {
         _api = api;
         _listener = socket;
-        _listener.blocking = false;
+        _listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
         _listener.bind(getAddress(host, port)[0]);
+        assert(_listener.isAlive, "Listening socket not active.");
     }
 
     public:
@@ -625,7 +633,6 @@ class RPCServer(API) {
         this(new API(), new TcpSocket, host, port);
     }
 
-
     /** Construct an RPCServer!API object to communicate via TCP sockets.
 
         api =   The instantiated class or struct providing the RPC API.
@@ -636,93 +643,108 @@ class RPCServer(API) {
         this(api, new TcpSocket, host, port);
     }
 
-    /** Listen for connections. */
-    void listen(int maxQueuedConnections = 100) {
-        import std.stdio;writeln("listening...");
+    /** Listen for and respond to connections. */
+    void listen(int maxQueuedConnections = 10) {
+        import std.parallelism : task;
+        import std.stdio;
+
         _listener.listen(maxQueuedConnections);
+        while (true) {
+            auto conn = _listener.accept;
+            writeln("accepted connection: ", conn);
 
-        while(true) {
-            writeln("processing new clients");
-            processNewClients;
-            writeln("clients: ", _activeClients);
-            foreach (client; _activeClients) {
-                writeln("receiving from client: ", client);
-                receive(client);
-                foreach (request; client.activeRequests.byKeyValue) {
-                    import std.stdio;
-                    writeln("receiving request: ", request);
-                    send(client.socket, executeMethod(request.value));
-                    client.activeRequests.remove(request.key);
-                }
-            }
-        }
-    }
-
-    void send(Socket socket, RPCResponse response) {
-        assert(0, "Implement RPCServer.send.");
-    }
-
-    /** Receive requests from the specified client.
-    */
-    private void receive(Client client) {
-        auto data = receiveJSONObjectFromStream(client.socket);
-        if (data.length > 0) {
-            auto req = RPCRequest.fromJSONString(data);
-            client.activeRequests[req.id] = req;
-        }
-        return;
-    }
-
-    /** Check for an accept new client connections. */
-    private void processNewClients() {
-        try {
             Client client;
-            client.socket = _listener.accept;
-            if (client.socket !is Socket.init) _activeClients ~= client;
-        } catch (SocketAcceptException ex) {
-            // TODO: Log to stderr. Do not rethrow.
-            throw ex;
-        }
-    }
+            if (conn !in _activeClients) {
+                writeln("new client");
+                client = Client(conn);
+                _activeClients[conn] = client;
+            } else client = _activeClients[conn];
 
-    private RPCResponse executeMethod(RPCRequest) {
-        assert(0, "Implement executeMethod.");
+            writeln("Handling client in new thread.");
+            task!handleClient(client).executeInNewThread;
+        }
     }
 }
 
-/** Receive a bytestream from the socket and return a JSON string.
+/** Handles a client's requests.
+
+    The `listen` method of the RPCServer calls this in a new thread to handle
+    client requests. This is not intended to be called by user code.
+*/
+void handleClient(ref Client client) {
+    import std.stdio;writeln("in handle clients");
+    //client.receive.executeMethod.send(client.socket);
+    auto reqs = client.receive;
+    writeln("received reqs: ", reqs);
+    auto resps = executeMethods(reqs);
+    writeln("Responses to send: ", resps);
+    writeln("closing socket.");
+    client.socket.close;
+}
+
+private:
+
+void send(RPCResponse response, Socket socket) {
+    assert(0, "Implement RPCServer.send.");
+}
+
+/** Receive a request from the specified client. */
+RPCRequest[] receive(Client client) {
+    RPCRequest[] reqs;
+    auto data = receiveDataFromStream(client.socket);
+    while (data.length > 0) {
+        reqs ~= RPCRequest.fromJSONString(takeJSONObject(data));
+    }
+    return reqs; //RPCRequest.fromJSONString(obj);
+}
+
+RPCResponse[] executeMethods(RPCRequest[] requests) {
+    assert(0, "Implement executeMethod.");
+    //foreach (req; requests) {
+    //}
+}
+
+char[] receiveDataFromStream(ref Socket socket) {
+    char[SocketBufSize] buf;
+    ptrdiff_t returnedBytes;
+    returnedBytes = socket.receive(buf);
+    if (returnedBytes > 0) {
+        return buf[0..returnedBytes].dup;
+    } else {
+        char[] emptyChar;
+        return emptyChar;
+    }
+}
+
+/** Take the first JSON object, parse it to a JSONValue, and remove it from
+    the input stream.
 
     Params:
-        socket =    The socket that received data from the client.
+        data =  The data from which to take a JSON object.
 
     Throws:
         InvalidDataReceivedException if the object is known not to be a JSON
         object. Note that the only validation is counting braces.
 */
-private char[] receiveJSONObjectFromStream(Socket socket) {
-    char[] data; // = new char[](SocketBufSize);
-    char[SocketBufSize] buf;
-    ptrdiff_t returnedBytes;
-
-    do {
-        returnedBytes = socket.receive(buf);
-        if (returnedBytes > 0) data ~= buf[0..returnedBytes];
-    } while(returnedBytes > 0);
-    if (data.length == 0) return data;
+char[] takeJSONObject(ref char[] data) {
+    char[] emptyChar;
+    if (data.length == 0) return emptyChar;
 
     // We know that we're receiving a JSON object, so we just need to count
-    // '{' and '}' characters.
-    int cnt = 0;
+    // '{' and '}' characters until we have a whole object.
     if (data[0] != '{') raise!(InvalidDataReceivedException)
         ("Expected to receive a '{' to begin a new JSON object.");
 
-    char[] obj; // TODO: make this an appender.
+    size_t charCount;
+    int braceCount;
     do {
-        if (data[0] == '{') ++cnt;
-        else if (data[0] == '}') --cnt;
-        obj ~= data[0];
-        data = data[1..$];
-    } while (cnt > 0);
+        if (data[charCount] == '{') ++braceCount;
+        else if (data[charCount] == '}') --braceCount;
+        ++charCount;
+    } while (braceCount > 0);
+
+    auto obj = data[0..charCount];
+    data = data[charCount..$];
     return obj;
 }
 
