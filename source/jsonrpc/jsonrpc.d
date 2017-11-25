@@ -661,7 +661,7 @@ class RPCServer(API) {
             } else client = _activeClients[conn];
 
             writeln("Handling client in new thread.");
-            task!handleClient(client).executeInNewThread;
+            task!handleClient(client, _api).executeInNewThread;
         }
     }
 }
@@ -671,16 +671,157 @@ class RPCServer(API) {
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 */
-void handleClient(ref Client client) {
+void handleClient(API)(ref Client client, API api) {
+    // This has to be a free function; if part of the RPCServer we can't run it
+    // via task(); TODO: If I start a thread myself, I might be able to move
+    // this and the executeMethod{s} into RPCServer and avoid passing the `api`
+    // instance.
     import std.stdio;writeln("in handle clients");
     //client.receive.executeMethod.send(client.socket);
     auto reqs = client.receive;
     writeln("received reqs: ", reqs);
-    auto resps = executeMethods(reqs);
+    auto resps = executeMethods(reqs, api);
     writeln("Responses to send: ", resps);
     writeln("closing socket.");
     client.socket.close;
 }
+
+RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
+    //assert(0, "Implement executeMethod.");
+    RPCResponse[] responses;
+    foreach (req; requests) {
+        responses ~= executeMethod(req, api);
+    }
+    return responses;
+}
+
+RPCResponse executeMethod(API)(RPCRequest request, API api) {
+    import std.stdio;
+
+    foreach(method; __traits(derivedMembers, API)) {
+        if (method == request.method) {
+
+            import std.traits;
+            import std.meta;
+
+            // TODO: This is the experiment mixin group.
+            mixin(
+                `writeln("Mixins -");` ~
+                `writeln("return type: ", typeid(ReturnType!(api.` ~ method ~ `)));` ~
+                `writeln();`
+             );
+            // Everything below is/could be permanent.
+
+            // TODO: Make this a sanity check.
+            mixin(
+                `writeln("is function? ", isFunction!(api.` ~ method ~ `));`
+            );
+
+            mixin(
+                "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
+                "alias theMethod = api." ~ method ~ ";\n"
+             );
+            // I don't know if I need to care about the return type, other than
+            // verification; I can do `return someVoidFunc();`.
+            // I do need to differentiate between void and not-void.
+
+            writeln("method: ", method);
+            writeln("parameters: ", request.params.type, " : ", (request.params));
+
+            static if((returnType is typeid(void))) {
+                writeln("*** return type is void ***");
+                switch (request.params.type) {
+                    // TODO: An empty param list should be usable, so I should be
+                    // able to merge this w/ the scalar (and array?) case.
+                    case JSON_TYPE.NULL:
+                        writeln("void func - params: null type");
+                        mixin(
+                            "static if (__traits(compiles," ~
+                                "api." ~ method ~ "())) {" ~
+                            "api." ~ method ~ "();\n"
+                            ~ "}"
+                         );
+                        break;
+                    case JSON_TYPE.OBJECT:
+                        writeln("params: object type");
+                        break;
+                    case JSON_TYPE.ARRAY:
+                        writeln("params: array type");
+                        writeln(request.params.array[]);
+                        break;
+                    default:
+                        writeln("void func - params: scalar type");
+                        /+
+                        mixin(
+                            `api.` ~ method ~ `(` ~ /* params */ ~ `);\n`
+                         );
+                        +/
+                }
+            } else {
+                writeln("^^^ not void return type ^^^");
+                /+
+                switch (request.params.type) {
+                    case JSON_TYPE.NULL:
+                        writeln("params: null type");
+                        mixin(
+                            `auto ret = api.` ~ method ~ `();\n`
+                         );
+                        writeln("returned: ", ret);
+                        break;
+                    case JSON_TYPE.OBJECT:
+                        writeln("params: object type");
+                        break;
+                    case JSON_TYPE.ARRAY:
+                        writeln("params: array type");
+                        writeln(request.params.array[]);
+                        break;
+                    default:
+                        writeln("params: scalar type");
+                        mixin(
+                            `auto ret =api.` ~ method ~ `(` ~ /* params */ ~ `);\n`
+                         );
+                        writeln("returned: ", ret);
+                }
+                        +/
+            }
+        }
+    }
+
+    // Get params, then I should be able to do something like:
+    //auto ret = __traits(getVirtualMethods, api, <methodname>)[0](<paramlist>);
+
+    return RPCResponse();
+}
+
+version(unittest) {
+    // I can't create this in a unit test block.
+    class MyAPI {
+        bool a() { return true; }
+        int b(string s) { return ("abc and " ~ s).length; }
+        void c(int a, bool b, float d) {}
+        void d(int a, int b) {}
+        void voidFunc() { import std.stdio; writeln(">> void function called. ");}
+    }
+}
+@test("## Working on executeMethod")
+unittest {
+import std.stdio;
+    auto sock = new FakeSocket;
+    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+
+    auto r = executeMethod(RPCRequest(0, "a"), server._api);
+    writeln("r: ", r);
+    auto r2 = executeMethod(RPCRequest(1, "b", JSONValue("some string")), server._api);
+    writeln("r2: ", r2);
+    auto r3 = executeMethod(RPCRequest(2, "c",
+            JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)), server._api);
+    writeln("r3: ", r3);
+    auto r4 = executeMethod(RPCRequest(3, "c", JSONValue([1, 2])), server._api);
+    writeln(r4);
+
+    executeMethod(RPCRequest(4, "voidFunc"), server._api);
+}
+
 
 private:
 
@@ -696,12 +837,6 @@ RPCRequest[] receive(Client client) {
         reqs ~= RPCRequest.fromJSONString(takeJSONObject(data));
     }
     return reqs; //RPCRequest.fromJSONString(obj);
-}
-
-RPCResponse[] executeMethods(RPCRequest[] requests) {
-    assert(0, "Implement executeMethod.");
-    //foreach (req; requests) {
-    //}
 }
 
 char[] receiveDataFromStream(ref Socket socket) {
@@ -776,6 +911,8 @@ unittest {
 version(unittest) {
     class FakeSocket : Socket {
         private bool _blocking;
+        private bool _isAlive;
+
         private char[] _receiveReturnValue =
                 cast(char[])`{"id":3,"result":[1,2,3]}`;
 
@@ -785,8 +922,7 @@ version(unittest) {
 
         @property char[] receiveReturnValue() { return _receiveReturnValue; }
 
-        override void bind(Address addr) {
-        }
+        override void bind(Address addr) { _isAlive = true; }
 
         override const nothrow @nogc @property @trusted bool blocking() {
             return _blocking;
@@ -796,7 +932,12 @@ version(unittest) {
             _blocking = byes;
         }
 
-        override @trusted void listen(int backlog) {}
+        override @trusted void setOption(SocketOptionLevel level,
+                SocketOption option, void[] value) {}
+
+        override const @property @trusted bool isAlive() { return _isAlive; }
+
+        override @trusted void listen(int backlog) { _isAlive = true; }
 
         alias receive = Socket.receive;
         override @trusted ptrdiff_t receive(void[] buf) {
