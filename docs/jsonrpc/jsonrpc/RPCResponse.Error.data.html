@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function TCPClientTransport.send</title>
+		<title>Function RPCResponse.Error.data</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,13 +30,8 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
-					</div>
-				</li>
-				<li>
 					<div class="module selected">
-						<a href="../../jsonrpc/transport.html">transport</a>
+						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 			</ul>
@@ -44,17 +39,13 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function TCPClientTransport.send</h1><p>Send an RPCRequest to the connected server.
+			<h1>Function RPCResponse.Error.data</h1><p>Retrieve the data related to the error.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">void</span> <span class="pln">send</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<a href="../../jsonrpc/jsonrpc/RPCRequest.html"><span class="typ">RPCRequest</span></a> <span class="pln">request</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">data
+			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>

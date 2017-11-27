@@ -2,12 +2,14 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>http://127.0.0.1/index.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/exception/FailedToSendDataException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidArgumentException.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/exception/InvalidDataReceivedException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidParameterException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/raise.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/handleClient.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.call.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.call.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
@@ -16,6 +18,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.id.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.method.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.method.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.params.html</loc></url>
@@ -24,6 +27,9 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.protocolVersion.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.data.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.errorCode.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.message.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.ErrorCode.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.protocolVersion.html</loc></url>
@@ -31,17 +37,5 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.listen.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.receive.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/RPCClientTransport.send.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/RPCServerTransport.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/RPCServerTransport.listen.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.receive.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.send.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPClientTransport.this.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.listen.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/transport/TCPServerTransport.this.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
 </urlset>

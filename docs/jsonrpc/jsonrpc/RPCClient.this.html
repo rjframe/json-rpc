@@ -34,11 +34,6 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
@@ -58,7 +53,7 @@ $('#symbolSearchPane').show();</script>
 						</a>
 					</li>
 				</ul>
-			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified RPCClientTransport.
+			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified Socket.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -66,13 +61,16 @@ $('#symbolSearchPane').show();</script>
 			<span class="pln">this</span>
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<a href="../../jsonrpc/transport/RPCClientTransport.html"><span class="typ">RPCClientTransport</span></a> <span class="pln">transport</span>
+			&nbsp;&nbsp;<span class="typ">Socket</span> <span class="pln">socket</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			
+			<section><p>The socket will be set to non-blocking. This is designed for testing.
+</p>
+</section>
+
 			<h2 id="1">Function RPCClient.this</h2><p>Instantiate an RPCClient bound to the specified host via a TCP connection.
 </p>
 			<div class="prototype">

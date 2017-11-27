@@ -34,17 +34,12 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.opDispatch</h1><p>Make a non-blocking remote call with natural syntax.
+			<h1>Function RPCClient.opDispatch</h1><p>Make a blocking remote call with natural syntax.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -58,7 +53,7 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>Any function (not present on the RPC client itself) that is present in
+			<section><p>Any method (not part of the RPC client itself) that is present in
         the remote API can be called as if it was a member of the RPC client,
         and that function call will be forwarded to the remote server.
 </p>
@@ -69,9 +64,30 @@ $('#symbolSearchPane').show();</script>
 <tr><td id="args">args</td><td> The arguments of the remote function to call.</td></tr>
 </table>
 </section>
+<section><h2>Returns</h2>
+<p>The return value of the function call.
+</p>
+</section>
 <section><h2>Throws</h2>
 <p>InvalidArgumentException if the argument types do not match the
             remote interface.
+</p>
+</section>
+<section><h2>Example</h2>
+<p>interface RemoteFuncs {
+                void func1();
+                int func2(bool b, string s);
+            }
+</p>
+
+<p>            auto rpc = new RPCClient!MyAPI("127.0.0.1", 54321);
+            rpc.func1();
+            int retval = rpc.func2(false, "hello");
+</p>
+</section>
+<section><h2>Notes</h2>
+<p>If you want the full response from the server, use the <code class="lang-d"><a href="../../jsonrpc/jsonrpc/RPCClient.call.html"><span class="pln">call</span></a></code>
+            function instead.
 </p>
 </section>
 

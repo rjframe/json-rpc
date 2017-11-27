@@ -1,0 +1,12 @@
+{
+	"name": "tcp",
+	"authors": [
+		"Ryan Frame"
+	],
+    "dependencies": {
+        "jsonrpc": { "path": "../../" }
+    },
+	"description": "Test JSON-RPC client/server.",
+	"copyright": "Copyright © 2017 Ryan Frame",
+	"license": "MIT"
+}

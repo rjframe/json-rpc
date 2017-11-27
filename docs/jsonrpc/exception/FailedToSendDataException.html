@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Class TCPServerTransport</title>
+		<title>Class FailedToSendDataException</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -25,7 +25,7 @@ $('#symbolSearchPane').show();</script>
 					</div>
 			<ul class="tree-view">
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../../jsonrpc/exception.html">exception</a>
 					</div>
 				</li>
@@ -34,62 +34,23 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module selected">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Class TCPServerTransport</h1><p>TCP transport for RPC servers.
+			<h1>Class FailedToSendDataException</h1><p>Raised when data did not send properly.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="kwd">class</span> <span class="typ">TCPServerTransport</span>
-			<br>&nbsp;&nbsp;: <a href="../../jsonrpc/transport/RPCServerTransport.html"><span class="typ">RPCServerTransport</span></a>
+			<span class="kwd">class</span> <span class="typ">FailedToSendDataException</span>
+			<br>&nbsp;&nbsp;: <span class="pln">object<wbr/></span><span class="pun">.</span><span class="typ">Exception</span>
 			<span class="pun">;</span>
 					</div>
 				</code>
 			</div>
 			
-			<section><h2>Constructors</h2>
-				<table>
-					<col class="caption"/>
-					<tr>
-						<th>Name</th><th>Description</th>
-					</tr>
-					<tr>
-						<td>
-							<a href="../../jsonrpc/transport/TCPServerTransport.this.html" class="[&quot;public&quot;]">
-								<code>this</code>
-							</a>
-						</td>
-						<td>Instantiate a TCPServerTransport object.
-</td>
-					</tr>
-				</table>
-			</section>
-			<section><h2>Methods</h2>
-				<table>
-					<col class="caption"/>
-					<tr>
-						<th>Name</th><th>Description</th>
-					</tr>
-					<tr>
-						<td>
-							<a href="../../jsonrpc/transport/TCPServerTransport.listen.html" class="[&quot;public&quot;]">
-								<code>listen</code>
-							</a>
-						</td>
-						<td>Begin listening for client requests.
-</td>
-					</tr>
-				</table>
-			</section>
 			
 			<footer>
 				<table class="license-info">

@@ -34,11 +34,6 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
@@ -57,8 +52,64 @@ $('#symbolSearchPane').show();</script>
 							Function <code>RPCServer.this</code>
 						</a>
 					</li>
+					<li>
+						<a href="#2">
+							Function <code>RPCServer.this</code>
+						</a>
+					</li>
 				</ul>
 			</nav><h2 id="0">Function RPCServer.this</h2><p>Construct an RPCServer!API object to communicate via TCP sockets.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>The API must be constructable via a default constructor; if you need to
+        use an alternate constructor, create it first and pass it to the
+        RPCServer via a <code class="lang-d"><span class="kwd">this</span></code> overload.
+</p>
+
+<p>        host =  The host interface on which to listen.
+        port =  The port on which to listen.
+</p>
+</section>
+
+			<h2 id="1">Function RPCServer.this</h2><p>Construct an RPCServer!API object.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">Socket</span> <span class="pln">socket</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>api =       The instantiated class or struct providing the RPC API.
+        transport = The network transport to use.
+</p>
+</section>
+
+			<h2 id="2">Function RPCServer.this</h2><p>Construct an RPCServer!API object to communicate via TCP sockets.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -79,27 +130,6 @@ $('#symbolSearchPane').show();</script>
 			<section><p>api =   The instantiated class or struct providing the RPC API.
         host =  The host interface on which to listen.
         port =  The port on which to listen.
-</p>
-</section>
-
-			<h2 id="1">Function RPCServer.this</h2><p>Construct an RPCServer!API object.
-</p>
-			<div class="prototype">
-				<code class="lang-d">
-					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<a href="../../jsonrpc/transport/RPCServerTransport.html"><span class="typ">RPCServerTransport</span></a> <span class="pln">transport</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-					</div>
-				</code>
-			</div>
-			<section><p>api =       The instantiated class or struct providing the RPC API.
-        transport = The network transport to use.
 </p>
 </section>
 

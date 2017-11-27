@@ -34,11 +34,6 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
@@ -88,18 +83,13 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>The JSONValue must be an Object or Array.
-</p>
-</section>
+			<section></section>
 
 			<section><h3>Parameters</h3>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="val">val</td><td>   A JSON Object or array.</td></tr>
+<tr><td id="val">val</td><td>   A JSON Object or array. Other value types will be wrapped
+                    in an array (e.g., 3 becomes [3]).</td></tr>
 </table>
-</section>
-<section><h3>Throws</h3>
-<p>InvalidParameterException if val is not a JSON Object or array.
-</p>
 </section>
 <h2 id="2">Function RPCRequest.params</h2><p>Set the parameters to the remote method as a JSON string.
 </p>
@@ -125,7 +115,7 @@ $('#symbolSearchPane').show();</script>
 </table>
 </section>
 <section><h3>Throws</h3>
-<p>InvalidParameterException if the json string is not a JSON Object or
+<p>InvalidArgumentException if the json string is not a JSON Object or
             array.
 </p>
 

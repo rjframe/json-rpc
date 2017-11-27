@@ -11,40 +11,59 @@ interface MyAPI {
 }
 
 /// These are the callable functions.
+// Inheritance isn't necessary; it just lets the compiler verify the API since
+// we're in the same module.
 class APIImpl : MyAPI {
     bool x(int y) { return (y > 5); }
     void a(bool b, int c, string d) { return; }
     int i() { return 100; };
 }
 
-auto server = new RPCServer!APIImpl(new APIImpl(), "127.0.0.1", 54321);
-server.listen();
+// We'll run this in a new thread for this example.
+void startServer(string host, string port) {
+    import core.thread : Thread;
+    import core.time : dur;
+    auto server = new RPCServer!APIImpl(host, port);
+    server.listen();
+    Thread.sleep(dur!"seconds"(3)); // Give it time to start up before connecting.
+}
 
+void main() {
+    import std.parallelism : task;
+    task!startServer("127.0.0.1", 54321).executeInNewThread;
 
-// Now create a client.
-auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+    // Now create a client.
+    auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-// These are blocking calls that return an RPCResponse.
-client.a(true, 2, "somestring");
-auto response = client.x(3);
-auto resp2 = client.call(x, 3);
+    // These are blocking calls that return the function's response.
+    client.a(true, 2, "somestring");
+    assert(client.x(3) == false);
+    assert(client.i() == 100);
 
-// Non-blocking calls are possible too.
-auto id = client.callAsync(i);
-RPCResponse asyncResponse;
-while (! client.response(id, asyncResponse)) {}
-// Do something with asyncResponse here.
+    // `call` is blocking, but returns the RPCResponse from the server.
+    auto resp2 = client.call(x, 3);
+
+    // Non-blocking calls are possible too.
+    auto id = client.callAsync(i);
+    RPCResponse asyncResponse;
+    while (! client.response(id, asyncResponse)) {}
+    // Do something with asyncResponse here.
+}
 ```
 
-This is not functional yet, so you'll need to check back later.
+Current status:
 
-Documentation is currently in the docs/ folder; I'll host properly it once the
-project is ready.
+* The client should be good; needs some hardening and cleanup.
+* The server will execute void functions; no response is returned yet.
+
+Documentation is currently in the docs/ folder and is not rebuilt with every
+commit; I'll host them properly it once the project is ready.
 
 ## Non-conforming details
 
-* All IDs must be integral; JSON-RPC allows NULL and string IDs as well.
-* (temporary) IDs are required in requests; Notifications are not yet supported.
+* (tmp) All IDs must be integral; JSON-RPC allows NULL and string IDs as well.
+* (tmp) IDs are required in requests; Notifications are not yet supported.
+* (tmp) Only TCP sockets are supported as a transport protocol.
 
 ## Testing
 

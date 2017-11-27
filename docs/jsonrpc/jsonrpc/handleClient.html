@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClientTransport.send</title>
+		<title>Function handleClient</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,13 +30,8 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
-					</div>
-				</li>
-				<li>
 					<div class="module selected">
-						<a href="../../jsonrpc/transport.html">transport</a>
+						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 			</ul>
@@ -44,32 +39,28 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClientTransport.send</h1><p>Send a request from a client to a server asynchronously.
+			<h1>Function handleClient</h1><p>Handles a client's requests.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="kwd">abstract </span><span class="typ">void</span> <span class="pln">send</span>
+			<span class="typ">void</span> <span class="pln">handleClient</span>(API)
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<a href="../../jsonrpc/jsonrpc/RPCRequest.html"><span class="typ">RPCRequest</span></a> <span class="pln">request</span>
+			&nbsp;&nbsp;<span class="kwd">ref </span><span class="typ">Client</span> <span class="pln">client</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="request">request</td><td>   The RPCRequest to send to the server.</td></tr>
-</table>
-</section>
-<section><h2>Returns</h2>
-<p>The ID of the request sent.
+			<section><p>The <code class="lang-d"><span class="pln">listen</span></code> method of the RPCServer calls this in a new thread to handle
+    client requests. This is not intended to be called by user code.
 </p>
 </section>
 
+			
 			<footer>
 				<table class="license-info">
 					<tr>

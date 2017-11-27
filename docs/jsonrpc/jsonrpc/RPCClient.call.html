@@ -34,31 +34,16 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.call</h1><p>Make a blocking remote function call.
+			<h1>Function RPCClient.call</h1><p>Make a function call on the RPC server.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">call</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">params</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-			<br/>
-			<br/>
 			<a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">call</span>
 			<span class="pun">(</span>
 			<br/>
@@ -85,6 +70,16 @@ $('#symbolSearchPane').show();</script>
 </section>
 <section><h2>Returns</h2>
 <p>The server's response.
+</p>
+</section>
+<section><h2>Example</h2>
+<p>interface MyAPI { void func(int val); }
+            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+</p>
+
+<p>            import std.json : JSONValue;
+            auto resp = client.call("func", <code class="lang-d"><span class="pun">{ </span><span class="str">"val"</span><span class="pun">: </span><span class="lit">3 </span><span class="pun">}</span></code>.parseJSON);
+            auto resp2 = client.call("func", JSONValue(3));
 </p>
 </section>
 

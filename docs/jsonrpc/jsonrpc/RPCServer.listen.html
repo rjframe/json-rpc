@@ -34,33 +34,27 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
-				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
-					</div>
-				</li>
 			</ul>
 				</li>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCServer.listen</h1><p>Listen for connections.
+			<h1>Function RPCServer.listen</h1><p>Listen for and respond to connections.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">void</span> <span class="pln">listen
-			<span class="pun">()</span><span class="pun">;</span>
+			<span class="typ">void</span> <span class="pln">listen</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">int</span> <span class="pln">maxQueuedConnections</span> <span class="pun">=</span> <span class="lit">10</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-</table>
-</section>
-
+			
+			
 			<footer>
 				<table class="license-info">
 					<tr>

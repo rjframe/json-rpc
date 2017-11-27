@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClientTransport.receive</title>
+		<title>Function RPCRequest.id</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,13 +30,8 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
-						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
-					</div>
-				</li>
-				<li>
 					<div class="module selected">
-						<a href="../../jsonrpc/transport.html">transport</a>
+						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 			</ul>
@@ -44,36 +39,18 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClientTransport.receive</h1><p>Check for and return a response to a request from a server.
+			<h1>Function RPCRequest.id</h1><p>The ID of this request.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="kwd">abstract </span><span class="typ">bool</span> <span class="pln">receive</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">long</span> <span class="pln">id</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="kwd">out </span><a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">response</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="typ">long</span> <span class="pln">id
+			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="id">id</td><td>        The ID of the request to retrieve.</td></tr>
-<tr><td id="response">response</td><td>  The RPCResponse object requested if available;
-                        otherwise, RPCResponse.init.</td></tr>
-</table>
-</section>
-<section><h2>Returns</h2>
-<p>true if the RPCResponse is available; false otherwise.
-</p>
-</section>
-
+			
+			
 			<footer>
 				<table class="license-info">
 					<tr>
