@@ -714,16 +714,10 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
                         ~ method ~ "));\n"
              );
 
-            static if((returnType is typeid(void))) {
+            //static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
-                if (request.params.type == JSON_TYPE.NULL) {
-                    mixin(GenCaller!(API, method, paramTypes));
-                    callRPCFunc!(method, JSONValue)(api, JSONValue("[]".parseJSON));
-                } else if (request.params.type == JSON_TYPE.ARRAY) {
-                    mixin(GenCaller!(API, method, paramTypes));
-                    callRPCFunc!(method, JSONValue)(api, request.params);
-                } else if (request.params.type == JSON_TYPE.OBJECT) {
-                    writeln(GenCaller!(API, method, paramTypes));
+                if (request.params.type == JSON_TYPE.OBJECT) {
+                    //writeln(GenCaller!(API, method, paramTypes));
                     /+
                     assert(0, "Object parameters not yet supported.");
                     JSONValue params;
@@ -735,10 +729,16 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
                     //mixin(GenCaller!(API, method, paramTypes));
                     //callRPCFunc!(method, JSONValue)(api, params);
                     +/
+                } else if (request.params.type == JSON_TYPE.ARRAY) {
+                    mixin(GenCaller!(API, method, paramTypes));
+                    callRPCFunc!(method, JSONValue)(api, request.params);
+                } else {
+                    mixin(GenCaller!(API, method, paramTypes));
+                    callRPCFunc!(method, JSONValue)(api, JSONValue([request.params]));
                 }
-            } else /* static if */ {
+            /+} else /* static if */ {
                 writeln("^^^ not void return type ^^^");
-            }
+            }+/
         }
     }
 
@@ -769,6 +769,8 @@ private auto unwrapValue(T)(JSONValue value) pure {
     import std.traits;
     static if (isFloatingPoint!T) {
         return cast(T)value.floating;
+    } else static if (isSomeString!T) {
+        return cast(T)value.str;
     } else static if (isSigned!T) {
         return cast(T)value.integer;
     } else static if (isUnsigned!T) {
@@ -777,8 +779,6 @@ private auto unwrapValue(T)(JSONValue value) pure {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
         assert(0, "Invalid type."); // TODO: Make this an exception.
-    } else static if (isSomeString!T) {
-        return cast(T)value.str;
     }
     // TODO: make this an exception.
     assert(0, "Non-scalar value cannot be unwrapped.");
