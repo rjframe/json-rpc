@@ -439,9 +439,9 @@ class RPCClient(API) if (is(API == interface)) {
 
         mixin(
             "alias paramTypes = AliasSeq!(Parameters!(API."
-            ~ apiFunc ~ "));\n" ~
+                    ~ apiFunc ~ "));\n" ~
             "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
-            ~ apiFunc ~ "));\n" ~
+                    ~ apiFunc ~ "));\n" ~
             "alias returnType = ReturnType!(API." ~ apiFunc ~ ");\n"
         );
 
@@ -457,12 +457,12 @@ class RPCClient(API) if (is(API == interface)) {
         auto returnVal = call(apiFunc, jsonArgs)._result;
         static if (is(returnType: void)) {
             return;
+        } else static if (isFloatingPoint!returnType) {
+            return cast(returnType)returnVal.floating;
         } else static if (isSigned!returnType) {
             return cast(returnType)returnVal.integer;
         } else static if (isUnsigned!returnType) {
             return cast(returnType)returnVal.uinteger;
-        } else static if (isFloating!returnType) {
-            return cast(returnType)returnVal.floating;
         } else static if (isSomeString!returnType) {
             return cast(returnType)returnVal.str;
         }
@@ -696,111 +696,113 @@ RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
 }
 
 RPCResponse executeMethod(API)(RPCRequest request, API api) {
-    import std.stdio;
+    import std.stdio; // Until we're finished writing this.
 
     foreach(method; __traits(derivedMembers, API)) {
         if (method == request.method) {
 
             import std.traits;
             import std.meta;
-
-            // TODO: This is the experiment mixin group.
             mixin(
-                `writeln("Mixins -");` ~
-                `writeln("return type: ", typeid(ReturnType!(api.` ~ method ~ `)));` ~
-                `writeln();`
-             );
-            // Everything below is/could be permanent.
-
-            // TODO: Make this a sanity check.
-            mixin(
-                `writeln("is function? ", isFunction!(api.` ~ method ~ `));`
+                `assert(isFunction!(api.` ~ method ~ `),
+                        "The passed method is not an object.");`
             );
 
             mixin(
                 "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
-                "alias theMethod = api." ~ method ~ ";\n"
+                "alias paramTypes = AliasSeq!(Parameters!(API."
+                        ~ method ~ "));\n"
              );
-            // I don't know if I need to care about the return type, other than
-            // verification; I can do `return someVoidFunc();`.
-            // I do need to differentiate between void and not-void.
-
-            writeln("method: ", method);
-            writeln("parameters: ", request.params.type, " : ", (request.params));
 
             static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
-                switch (request.params.type) {
+                if (request.params.type == JSON_TYPE.NULL) {
                     // TODO: An empty param list should be usable, so I should be
                     // able to merge this w/ the scalar (and array?) case.
-                    case JSON_TYPE.NULL:
-                        writeln("void func - params: null type");
-                        mixin(
-                            "static if (__traits(compiles," ~
-                                "api." ~ method ~ "())) {" ~
-                            "api." ~ method ~ "();\n"
-                            ~ "}"
-                         );
-                        break;
-                    case JSON_TYPE.OBJECT:
-                        writeln("params: object type");
-                        break;
-                    case JSON_TYPE.ARRAY:
-                        writeln("params: array type");
-                        writeln(request.params.array[]);
-                        break;
-                    default:
-                        writeln("void func - params: scalar type");
-                        /+
-                        mixin(
-                            `api.` ~ method ~ `(` ~ /* params */ ~ `);\n`
-                         );
-                        +/
+                    mixin(
+                        "static if (__traits(compiles, " ~
+                            "api." ~ method ~ "())) {\n" ~
+                        "api." ~ method ~ "();\n"
+                        ~ "}\n"
+                     );
+                } else if (request.params.type == JSON_TYPE.ARRAY) {
+                    mixin(GenCaller!(API, method, paramTypes));
+                    callRPCFunc!(method, JSONValue[])(api, request.params.array);
+                } else {
+                    //assert(0, "Not implemented.");
                 }
-            } else {
+            } else /* static if */ {
                 writeln("^^^ not void return type ^^^");
-                /+
-                switch (request.params.type) {
-                    case JSON_TYPE.NULL:
-                        writeln("params: null type");
-                        mixin(
-                            `auto ret = api.` ~ method ~ `();\n`
-                         );
-                        writeln("returned: ", ret);
-                        break;
-                    case JSON_TYPE.OBJECT:
-                        writeln("params: object type");
-                        break;
-                    case JSON_TYPE.ARRAY:
-                        writeln("params: array type");
-                        writeln(request.params.array[]);
-                        break;
-                    default:
-                        writeln("params: scalar type");
-                        mixin(
-                            `auto ret =api.` ~ method ~ `(` ~ /* params */ ~ `);\n`
-                         );
-                        writeln("returned: ", ret);
-                }
-                        +/
             }
         }
     }
 
-    // Get params, then I should be able to do something like:
-    //auto ret = __traits(getVirtualMethods, api, <methodname>)[0](<paramlist>);
-
     return RPCResponse();
+}
+
+private static string GenCaller(API, string method, paramTypes...)() pure {
+    import std.conv : text;
+    import std.range : iota;
+
+    // TODO: The assertion probably needs to be an exception.
+    string func = "\nauto callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
+        ~ "\tassert(args.length == " ~ paramTypes.length.text ~ ");\n"
+        ~ "\tapi." ~ method ~ "(";
+
+    static foreach(i; iota(paramTypes.length)) {
+        func ~= "args[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+    }
+    func ~= ");\n}\n";
+
+    return func;
+}
+
+/** Unwrap a scalar value from a JSONValue object. */
+private auto unwrapValue(T)(JSONValue value) pure {
+    import std.traits;
+    static if (isFloatingPoint!T) {
+        return cast(T)value.floating;
+    } else static if (isSigned!T) {
+        return cast(T)value.integer;
+    } else static if (isUnsigned!T) {
+        return cast(T)value.uinteger;
+    } else static if (isBoolean!T) {
+        if (value.type == JSON_TYPE.TRUE) return true;
+        if (value.type == JSON_TYPE.FALSE) return false;
+        assert(0, "Invalid type."); // TODO: Make this an exception.
+    } else static if (isSomeString!T) {
+        return cast(T)value.str;
+    }
+    // TODO: make this an exception.
+    assert(0, "Non-scalar value cannot be unwrapped.");
+}
+
+@test("unwrapValue retrieves scalar values from a JSONValue")
+///
+unittest {
+    auto a = JSONValue("a");
+    auto b = JSONValue(2);
+    auto c = JSONValue(2u);
+    auto d = JSONValue(2.3);
+    auto e = JSONValue(true);
+
+    assert(a.unwrapValue!string == "a");
+    assert(b.unwrapValue!int == 2);
+    assert(c.unwrapValue!uint == 2u);
+    auto fl = d.unwrapValue!float;
+    assert(fl > 2.2 && fl < 2.4);
+    assert(e.unwrapValue!bool == true);
 }
 
 version(unittest) {
     // I can't create this in a unit test block.
     class MyAPI {
+        import std.stdio : writeln;
         bool a() { return true; }
         int b(string s) { return ("abc and " ~ s).length; }
         void c(int a, bool b, float d) {}
-        void d(int a, int b) {}
-        void voidFunc() { import std.stdio; writeln(">> void function called. ");}
+        void d(int a, int b) { writeln("Function 'd' called!"); }
+        void voidFunc() { writeln(">> void function called. ");}
     }
 }
 @test("## Working on executeMethod")
@@ -816,7 +818,7 @@ import std.stdio;
     auto r3 = executeMethod(RPCRequest(2, "c",
             JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)), server._api);
     writeln("r3: ", r3);
-    auto r4 = executeMethod(RPCRequest(3, "c", JSONValue([1, 2])), server._api);
+    auto r4 = executeMethod(RPCRequest(3, "d", JSONValue([1, 2])), server._api);
     writeln(r4);
 
     executeMethod(RPCRequest(4, "voidFunc"), server._api);
