@@ -717,19 +717,24 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
             static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
                 if (request.params.type == JSON_TYPE.NULL) {
-                    // TODO: An empty param list should be usable, so I should be
-                    // able to merge this w/ the scalar (and array?) case.
-                    mixin(
-                        "static if (__traits(compiles, " ~
-                            "api." ~ method ~ "())) {\n" ~
-                        "api." ~ method ~ "();\n"
-                        ~ "}\n"
-                     );
+                    mixin(GenCaller!(API, method, paramTypes));
+                    callRPCFunc!(method, JSONValue)(api, JSONValue("[]".parseJSON));
                 } else if (request.params.type == JSON_TYPE.ARRAY) {
                     mixin(GenCaller!(API, method, paramTypes));
-                    callRPCFunc!(method, JSONValue[])(api, request.params.array);
-                } else {
-                    //assert(0, "Not implemented.");
+                    callRPCFunc!(method, JSONValue)(api, request.params);
+                } else if (request.params.type == JSON_TYPE.OBJECT) {
+                    writeln(GenCaller!(API, method, paramTypes));
+                    /+
+                    assert(0, "Object parameters not yet supported.");
+                    JSONValue params;
+                    foreach (string key, val; request.params) {
+                        // TODO: Validate against API and build a params array
+                        // to pass to callRPCFunc.
+                    }
+
+                    //mixin(GenCaller!(API, method, paramTypes));
+                    //callRPCFunc!(method, JSONValue)(api, params);
+                    +/
                 }
             } else /* static if */ {
                 writeln("^^^ not void return type ^^^");
@@ -746,11 +751,13 @@ private static string GenCaller(API, string method, paramTypes...)() pure {
 
     // TODO: The assertion probably needs to be an exception.
     string func = "\nauto callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
-        ~ "\tassert(args.length == " ~ paramTypes.length.text ~ ");\n"
+    //    ~ "\tassert(args.length == " ~ paramTypes.length.text ~ ");\n"
         ~ "\tapi." ~ method ~ "(";
 
-    static foreach(i; iota(paramTypes.length)) {
-        func ~= "args[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+    static if (paramTypes.length > 0) {
+        static foreach(i; iota(paramTypes.length)) {
+            func ~= "args[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+        }
     }
     func ~= ");\n}\n";
 
