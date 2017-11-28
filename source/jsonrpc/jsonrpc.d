@@ -687,7 +687,6 @@ void handleClient(API)(ref Client client, API api) {
 }
 
 RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
-    //assert(0, "Implement executeMethod.");
     RPCResponse[] responses;
     foreach (req; requests) {
         responses ~= executeMethod(req, api);
@@ -701,42 +700,25 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
     foreach(method; __traits(derivedMembers, API)) {
         if (method == request.method) {
 
-            import std.traits;
-            import std.meta;
+            import std.traits : isFunction, ReturnType;
             mixin(
                 `assert(isFunction!(api.` ~ method ~ `),
-                        "The passed method is not an object.");`
+                        "The passed method is not an object.");` ~
+                "\nenum returnType = typeid(ReturnType!(API." ~ method ~ "));\n"
             );
-
-            mixin(
-                "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
-                "alias paramTypes = AliasSeq!(Parameters!(API."
-                        ~ method ~ "));\n"
-             );
 
             //static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
-                if (request.params.type == JSON_TYPE.OBJECT) {
-                    //writeln(GenCaller!(API, method, paramTypes));
-                    /+
-                    assert(0, "Object parameters not yet supported.");
-                    JSONValue params;
-                    foreach (string key, val; request.params) {
-                        // TODO: Validate against API and build a params array
-                        // to pass to callRPCFunc.
-                    }
-
-                    //mixin(GenCaller!(API, method, paramTypes));
-                    //callRPCFunc!(method, JSONValue)(api, params);
-                    +/
-                } else if (request.params.type == JSON_TYPE.ARRAY) {
-                    mixin(GenCaller!(API, method, paramTypes));
+                writeln(GenCaller!(API, method));
+                mixin(GenCaller!(API, method));
+                if (request.params.type == JSON_TYPE.OBJECT
+                        || request.params.type == JSON_TYPE.ARRAY) {
                     callRPCFunc!(method, JSONValue)(api, request.params);
                 } else {
-                    mixin(GenCaller!(API, method, paramTypes));
+                    // Wrap scalar values in an array.
                     callRPCFunc!(method, JSONValue)(api, JSONValue([request.params]));
                 }
-            /+} else /* static if */ {
+            /+} else {
                 writeln("^^^ not void return type ^^^");
             }+/
         }
@@ -745,18 +727,67 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
     return RPCResponse();
 }
 
-private static string GenCaller(API, string method, paramTypes...)() pure {
-    import std.conv : text;
-    import std.range : iota;
+/** Generate the code to a function that will call the API function specified
+    by the client.
 
+    Parameters are provided as a JSONValue array or Object; Objects will be
+    converted to arrays.
+
+    Example:
+    ---
+    mixin(GenCaller!(API, method));
+    auto retval = callRPCFunc!(method, JSONValue)(api, request.params);
+    ---
+*/
+private static string GenCaller(API, string method)() pure {
+    import std.conv : text;
+    import std.meta : AliasSeq;
+    import std.range : iota;
+    import std.traits : Parameters, ParameterIdentifierTuple;
+
+    mixin(
+        "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
+                ~ method ~ "));\n"
+      ~ "alias paramTypes = AliasSeq!(Parameters!(API." ~ method ~ "));\n"
+     );
+
+    // TODO: Validate against API - if a named param is passed that isn't on the
+    // method we need to throw/return an error response.
     // TODO: The assertion probably needs to be an exception.
-    string func = "\nauto callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
-    //    ~ "\tassert(args.length == " ~ paramTypes.length.text ~ ");\n"
-        ~ "\tapi." ~ method ~ "(";
+    string func =
+            "\nauto callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
+        ~ "    JSONValue vals = args;\n"
+        ~ "    if (args.type == JSON_TYPE.OBJECT) {\n"
+        ~ "        vals = JSONValue(`[]`.parseJSON);\n";
+
+    // Size the array to fit our data.
+    static foreach(i; iota(paramTypes.length)) {
+        func ~=
+          "        vals.array ~= JSONValue();\n";
+    }
+
+    func ~=
+          "        foreach (string key, val; args) {\n";
+
+    static foreach(i; iota(paramTypes.length)) {
+        func ~=
+          "            if (key == " ~ paramNames[i].stringof ~ ") "
+        ~ "                vals[" ~ i.text ~ "] = val;\n";
+    }
+
+    func ~=
+          "        }\n" // foreach (key, val)
+        ~ "    }\n" // if (JSON_TYPE.OBJECT)
+
+    // TODO: No arguments will give us vals length of 1, paramTypes length of
+    // 0; all others should match.
+    //~ "\tassert(vals.array.length == " ~ paramTypes.length.text ~ ");\n"
+        ~ "    return api." ~ method ~ "(";
 
     static if (paramTypes.length > 0) {
         static foreach(i; iota(paramTypes.length)) {
-            func ~= "args[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+            func ~=
+                "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
         }
     }
     func ~= ");\n}\n";
@@ -807,11 +838,12 @@ version(unittest) {
         import std.stdio : writeln;
         bool a() { return true; }
         int b(string s) { return ("abc and " ~ s).length; }
-        void c(int a, bool b, float d) {}
+        void c(int a, bool b, float c) {}
         void d(int a, int b) { writeln("Function 'd' called!"); }
         void voidFunc() { writeln(">> void function called. ");}
     }
 }
+
 @test("## Working on executeMethod")
 unittest {
 import std.stdio;
