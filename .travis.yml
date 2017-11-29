@@ -5,3 +5,9 @@ dist: trusty
 d:
     - dmd-2.077.0
     - dmd-2.076.1
+
+script:
+    - dub test -b unittest-cov --compiler=${DC}
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash)
