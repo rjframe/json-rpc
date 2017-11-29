@@ -166,8 +166,7 @@ struct RPCRequest {
         if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
                 && val.type != JSON_TYPE.NULL) {
             _params = JSONValue([val]);
-        }
-        _params = val;
+        } else _params = val;
     }
 
     /** Set the parameters to the remote method as a JSON string.
@@ -709,15 +708,8 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
 
             //static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
-                writeln(GenCaller!(API, method));
                 mixin(GenCaller!(API, method));
-                if (request.params.type == JSON_TYPE.OBJECT
-                        || request.params.type == JSON_TYPE.ARRAY) {
-                    callRPCFunc!(method, JSONValue)(api, request.params);
-                } else {
-                    // Wrap scalar values in an array.
-                    callRPCFunc!(method, JSONValue)(api, JSONValue([request.params]));
-                }
+                callRPCFunc!(method, JSONValue)(api, request.params);
             /+} else {
                 writeln("^^^ not void return type ^^^");
             }+/
