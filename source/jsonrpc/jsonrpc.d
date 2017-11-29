@@ -867,7 +867,7 @@ version(unittest) {
     class MyAPI {
         import std.stdio : writeln;
         bool a() { return true; }
-        int b(string s) { return ("abc and " ~ s).length; }
+        ulong b(string s) { return ("abc and " ~ s).length; }
         void c(int a, bool b, float c) {}
         void d(int a, int b) { writeln("Function 'd' called!"); }
         void voidFunc() { writeln(">> void function called. ");}
