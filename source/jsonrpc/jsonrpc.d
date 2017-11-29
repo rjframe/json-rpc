@@ -732,6 +732,14 @@ RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
 }
 
 RPCResponse executeMethod(API)(RPCRequest request, API api) {
+    // TODO: Void won't return; actually, I need to know success/failure to send
+    // that to the client.
+    auto retval = execRPCMethod!API(request, api);
+    // TODO: Wrap the return value and return the response.
+    return RPCResponse();
+}
+
+private auto execRPCMethod(API)(RPCRequest request, API api) {
     import std.stdio; // Until we're finished writing this.
 
     foreach(method; __traits(derivedMembers, API)) {
@@ -744,32 +752,36 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
                 "\nenum returnType = typeid(ReturnType!(API." ~ method ~ "));\n"
             );
 
-            //static if((returnType is typeid(void))) {
+            // TODO: Merge the VoidCallers and the ValueCallers; I'm not sure
+            // why I can't use static if to do this...
+            static if((returnType is typeid(void))) {
                 writeln("*** return type is void ***");
-                mixin(GenCaller!(API, method));
-                callRPCFunc!(method, JSONValue)(api, request.params);
-            /+} else {
+                mixin(GenVoidCaller!(API, method));
+                callVoidRPCFunc!(method, JSONValue)(api, request.params);
+                return true;
+            } else {
                 writeln("^^^ not void return type ^^^");
-            }+/
+                mixin(GenValueCaller!(API, method));
+                return callValueRPCFunc!(method, JSONValue)(api, request.params);
+            }
         }
     }
-
-    return RPCResponse();
+    assert(0, "Should have returned by now.");
 }
 
-/** Generate the code to a function that will call the API function specified
-    by the client.
+/** Generate the code to a function that will call the void API function
+    specified by the client.
 
     Parameters are provided as a JSONValue array or Object; Objects will be
     converted to arrays.
 
     Example:
     ---
-    mixin(GenCaller!(API, method));
-    auto retval = callRPCFunc!(method, JSONValue)(api, request.params);
+    mixin(GenVoidCaller!(API, method));
+    callValueRPCFunc!(method, JSONValue)(api, request.params);
     ---
 */
-private static string GenCaller(API, string method)() pure {
+private static string GenVoidCaller(API, string method)() pure {
     import std.conv : text;
     import std.meta : AliasSeq;
     import std.range : iota;
@@ -785,7 +797,75 @@ private static string GenCaller(API, string method)() pure {
     // method we need to throw/return an error response.
     // TODO: The assertion probably needs to be an exception.
     string func =
-            "\nauto callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
+            "\nvoid callVoidRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
+        ~ "    JSONValue vals = args;\n"
+        ~ "    if (args.type == JSON_TYPE.OBJECT) {\n"
+        ~ "        vals = JSONValue(`[]`.parseJSON);\n";
+
+    // Size the array to fit our data.
+    static foreach(i; iota(paramTypes.length)) {
+        func ~=
+          "        vals.array ~= JSONValue();\n";
+    }
+
+    func ~=
+          "        foreach (string key, val; args) {\n";
+
+    static foreach(i; iota(paramTypes.length)) {
+        func ~=
+          "            if (key == " ~ paramNames[i].stringof ~ ") "
+        ~ "                vals[" ~ i.text ~ "] = val;\n";
+    }
+
+    func ~=
+          "        }\n" // foreach (key, val)
+        ~ "    }\n" // if (JSON_TYPE.OBJECT)
+
+    // TODO: No arguments will give us vals length of 1, paramTypes length of
+    // 0; all others should match.
+    //~ "\tassert(vals.array.length == " ~ paramTypes.length.text ~ ");\n"
+        ~ "    api." ~ method ~ "(";
+
+    static if (paramTypes.length > 0) {
+        static foreach(i; iota(paramTypes.length)) {
+            func ~=
+                "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+        }
+    }
+    func ~= ");\n}\n";
+
+    return func;
+}
+
+/** Generate the code to a function that will call the API function
+    specified by the client and return its return value.
+
+    Parameters are provided as a JSONValue array or Object; Objects will be
+    converted to arrays.
+
+    Example:
+    ---
+    mixin(GenValueCaller!(API, method));
+    auto retval = callValueRPCFunc!(method, JSONValue)(api, request.params);
+    ---
+*/
+private static string GenValueCaller(API, string method)() pure {
+    import std.conv : text;
+    import std.meta : AliasSeq;
+    import std.range : iota;
+    import std.traits : Parameters, ParameterIdentifierTuple;
+
+    mixin(
+        "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
+                ~ method ~ "));\n"
+      ~ "alias paramTypes = AliasSeq!(Parameters!(API." ~ method ~ "));\n"
+     );
+
+    // TODO: Validate against API - if a named param is passed that isn't on the
+    // method we need to throw/return an error response.
+    // TODO: The assertion probably needs to be an exception.
+    string func =
+            "\nauto callValueRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
         ~ "    JSONValue vals = args;\n"
         ~ "    if (args.type == JSON_TYPE.OBJECT) {\n"
         ~ "        vals = JSONValue(`[]`.parseJSON);\n";
@@ -863,7 +943,8 @@ unittest {
 }
 
 version(unittest) {
-    // I can't create this in a unit test block.
+    // I can't create this in a unit test block, so we'll share the API among
+    // tests.
     class MyAPI {
         import std.stdio : writeln;
         bool a() { return true; }
@@ -872,6 +953,31 @@ version(unittest) {
         void d(int a, int b) { writeln("Function 'd' called!"); }
         void voidFunc() { writeln(">> void function called. ");}
     }
+}
+
+@test("execRPCMethod executes void methods")
+unittest {
+    auto sock = new FakeSocket;
+    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+
+    auto r1 = execRPCMethod(RPCRequest(2, "c",
+            JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)), server._api);
+    auto r2 = execRPCMethod(RPCRequest(3, "d", JSONValue([1, 2])), server._api);
+    auto r3 = execRPCMethod(RPCRequest(4, "voidFunc"), server._api);
+
+    assert(r1 == true && r2 == true && r3 == true);
+}
+
+@test("execRPCMethod executes non-void methods")
+unittest {
+    auto sock = new FakeSocket;
+    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+
+    auto r1 = execRPCMethod(RPCRequest(0, "a"), server._api);
+    auto r2 = execRPCMethod(RPCRequest(1, "b", JSONValue("some string")), server._api);
+
+    assert(r1 == true);
+    assert(r2 == 19);
 }
 
 @test("## Working on executeMethod")
