@@ -188,6 +188,18 @@ struct RPCRequest {
         params(json.parseJSON);
     }
 
+    /** Parse a JSON string into an RPCRequest object.
+
+        Params:
+            str =   The JSON string to parse.
+
+        Throws:
+            InvalidDataReceivedException if the ID or method fields are missing.
+
+            JSONException if the ID or method fields are an incorrect type. The
+            ID must be integral (non-conformant to the JSON-RPC spec) and the
+            method must be a string.
+    */
     static package RPCRequest fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         if (json.type != JSON_TYPE.NULL && "id" in json && "method" in json) {
@@ -200,6 +212,32 @@ struct RPCRequest {
                 ("Response is missing 'id' and/or 'method' fields.");
             assert(0);
         }
+    }
+
+    @test("fromJSONString converts JSON to RPCRequest")
+    unittest {
+        auto req = RPCRequest.fromJSONString(
+                `{"id": 0, "method": "func", "params": [0, 1]}`);
+        assert(req.id == 0, "Incorrect ID.");
+        assert(req.method == "func", "Incorrect method.");
+        assert(req.params.array == [JSONValue(0), JSONValue(1)],
+                "Incorrect params.");
+    }
+
+    @test("fromJSONString throws exception on invalid input")
+    unittest {
+        import std.exception : assertThrown;
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"method": "func", "params": [0, 1]}`));
+
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"id": 0, "params": [0, 1]}`));
+
+        assertThrown!JSONException(
+                RPCRequest.fromJSONString(
+                    `{"id": "0", "method": "func", "params": [0, 1]}`));
     }
 }
 
