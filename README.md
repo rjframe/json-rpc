@@ -5,16 +5,16 @@
 This is a library to create JSON-RPC servers and clients quickly and use them
 simply.
 
-```
+```d
 interface MyAPI {
     bool x(int y);
     void a(bool b, int c, string d);
     int i();
 }
 
-/// These are the callable functions.
-// Inheritance isn't necessary; it just lets the compiler verify the API since
-// we're in the same module.
+// These are the callable functions.
+// Inheritance isn't necessary (this could be a struct too); it just lets the
+// compiler verify the API since we're in the same module.
 class APIImpl : MyAPI {
     bool x(int y) { return (y > 5); }
     void a(bool b, int c, string d) { return; }
@@ -55,8 +55,8 @@ void main() {
 
 Current status:
 
-* The client should be good; needs some hardening and cleanup.
-* The server will execute void functions; no response is returned yet.
+* The client should be good; needs some cleanup.
+* The server will execute functions, but only an empty response is returned.
 
 Documentation is currently in the docs/ folder and is not rebuilt with every
 commit; I'll host them properly it once the project is ready.
@@ -70,9 +70,10 @@ commit; I'll host them properly it once the project is ready.
 ## Testing
 
 The [tested](http://code.dlang.org/packages/tested) library is an optional
-dependency; to use it, add the following `dub.selections.json` to your project
-root:
-```
+dependency for unit testing; to use it, add the following `dub.selections.json`
+to your project root:
+
+```json
 {
     "fileVersion": 1,
     "versions": {
