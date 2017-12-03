@@ -293,6 +293,9 @@ struct RPCResponse {
     /** The JSON-RPC protocol version. */
     @property string protocolVersion() { return "2.0"; }
 
+    // TODO: I want to implicitly unwrap scalar values.
+    @property JSONValue result() { return _result; }
+
     /** Standard error codes.
 
         Codes between -32768 and -32000 (inclusive) are reserved;
@@ -731,6 +734,12 @@ RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
     return responses;
 }
 
+/** Execute an RPC method and return the server's response.
+
+    Params:
+        request =   The request from the client.
+        api =       The class or struct containing the function to call.
+*/
 RPCResponse executeMethod(API)(RPCRequest request, API api) {
     // TODO: Void won't return; actually, I need to know success/failure to send
     // that to the client.
@@ -739,6 +748,10 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
     return RPCResponse();
 }
 
+/** Execute an RPC method and return its result.
+
+    For now, void methods return `true`.
+*/
 private auto execRPCMethod(API)(RPCRequest request, API api) {
     import std.stdio; // Until we're finished writing this.
 
@@ -851,7 +864,7 @@ private auto unwrapValue(T)(JSONValue value) pure {
     } else static if (isBoolean!T) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
-        assert(0, "Invalid type."); // TODO: Make this an exception.
+        assert(0, "Expected boolean, but type is " ~ value.type); // TODO: Make this an exception.
     }
     // TODO: make this an exception.
     assert(0, "Non-scalar value cannot be unwrapped.");
