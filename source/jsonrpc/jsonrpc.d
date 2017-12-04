@@ -741,48 +741,39 @@ RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
         api =       The class or struct containing the function to call.
 */
 RPCResponse executeMethod(API)(RPCRequest request, API api) {
-    auto retval = execRPCMethod!API(request, api);
-    import std.stdio;writeln("exec returned: ", retval);
-    writeln("of type: ", typeid(retval));
-    return RPCResponse(request.id, JSONValue(retval));
+    import std.traits : isFunction;
+    foreach(method; __traits(derivedMembers, API)) {
+        mixin(
+            "enum isMethodAFunction = isFunction!(api." ~ method ~ ");\n"
+        );
+        // TODO: Only check public members.
+        static if (isMethodAFunction) {
+            if (method == request.method) {
+                auto retval = execRPCMethod!(API, method)(request, api);
+                return RPCResponse(request.id, JSONValue(retval));
+            }
+        }
+    }
+    assert(0, "executeMethod should never reach the end of the function.");
 }
 
 /** Execute an RPC method and return its result.
 
     For now, void methods return `true`.
 */
-private auto execRPCMethod(API)(RPCRequest request, API api) {
-    import std.stdio; // Until we're finished writing this.
+private auto execRPCMethod(API, string method)(RPCRequest request, API api) {
+    import std.traits : ReturnType;
+    mixin(
+        "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
+        GenCaller!(API, method)
+    );
 
-    foreach(method; __traits(derivedMembers, API)) {
-        import std.traits : isFunction, ReturnType;
-
-        mixin(
-            "enum isMethodAFunction = isFunction!(api." ~ method ~ ");\n"
-        );
-        static if (isMethodAFunction) {
-            // TODO: Only check public members.
-            if (method == request.method) {
-
-                // TODO: I'm only generating one function, of return type
-                // [whatever happens to be first], because execRPCMethod is only
-                // generated once...
-                mixin(
-                    "enum returnType = typeid(ReturnType!(API."
-                            ~ method ~ "));\n" ~
-                    GenCaller!(API, method)
-                );
-
-                static if((returnType is typeid(void))) {
-                    callRPCFunc!(method, JSONValue)(api, request.params);
-                    // TODO: What should I do here?
-                    return true;
-                } else {
-                    pragma(msg, "return type: ", returnType.stringof);
-                    return callRPCFunc!(method, JSONValue)(api, request.params);
-                }
-            }
-        }
+    static if((returnType is typeid(void))) {
+        callRPCFunc!(method, JSONValue)(api, request.params);
+        // TODO: What should I do here?
+        return true;
+    } else {
+        return callRPCFunc!(method, JSONValue)(api, request.params);
     }
     // TODO: I'm hitting this when the called method doesn't exist. I either need
     // to validate before we get here, or throw an exception with an accurate
@@ -816,7 +807,7 @@ private static string GenCaller(API, string method)() pure {
      );
 
     // TODO: Validate against API - if a named param is passed that isn't on the
-    // method we need to throw/return an error response.
+    // method we need to throw/return an error response. See execRPCMethod.
     // TODO: The assertion probably needs to be an exception.
     string func =
             "\nauto ref callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
@@ -854,6 +845,7 @@ private static string GenCaller(API, string method)() pure {
             func ~= ("    return ");
         }
     } else func ~= "    ";
+
     func ~= "api." ~ method ~ "(";
 
     static if (paramTypes.length > 0) {
@@ -916,6 +908,8 @@ version(unittest) {
         bool voidWithString_called = false;
 
         bool retBool() { return true; }
+        alias retTrue = retBool;
+        bool retFalse() { return false; }
 
         ulong retUlong(string s) { return ("abc and " ~ s).length; }
 
@@ -926,8 +920,7 @@ version(unittest) {
         void voidArray(int a, int b) { voidArray_called = true; }
         void voidWithString(string s) { voidWithString_called = true; }
 
-        // TODO: Values are currently being cast to ulong.
-        //string retString() { return "testing"; }
+        string retString() { return "testing"; }
     }
 }
 
@@ -937,16 +930,23 @@ unittest {
     auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
 
     // Non-void methods.
-    auto r1 = execRPCMethod(RPCRequest(0, "retBool"), server._api);
+    auto r1 = execRPCMethod!(MyAPI, "retBool")
+            (RPCRequest(0, "retBool"), server._api);
     assert(r1 == true);
-    auto r2 = execRPCMethod(RPCRequest(1, "retUlong", JSONValue("some string")), server._api);
+
+    auto r2 = execRPCMethod!(MyAPI, "retUlong")
+            (RPCRequest(1, "retUlong", JSONValue("some string")), server._api);
     assert(r2 == 19);
 
     // Void methods.
-    auto r3 = execRPCMethod(RPCRequest(2, "void3params",
-            JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)), server._api);
-    auto r4 = execRPCMethod(RPCRequest(3, "voidArray", JSONValue([1, 2])), server._api);
-    auto r5 = execRPCMethod(RPCRequest(4, "voidFunc"), server._api);
+    auto r3 = execRPCMethod!(MyAPI, "void3params")
+            (RPCRequest(2, "void3params",
+                JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
+                server._api);
+    auto r4 = execRPCMethod!(MyAPI, "voidArray")
+            (RPCRequest(3, "voidArray", JSONValue([1, 2])), server._api);
+    auto r5 = execRPCMethod!(MyAPI, "voidFunc")
+            (RPCRequest(4, "voidFunc"), server._api);
 
     assert(r3 == true && r4 == true && r5 == true);
     assert(server._api.void3params_called == true
@@ -959,42 +959,37 @@ unittest {
     auto sock = new FakeSocket;
     auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
 
-    auto r1 = executeMethod(RPCRequest(0, "retUlong", JSONValue("some string")), server._api);
-    import std.stdio;
-    writeln("r1: ", r1);
+    auto r1 = executeMethod(RPCRequest(0, "retUlong",
+            JSONValue("some string")), server._api);
     assert(r1.id == 0);
     assert(r1.result.unwrapValue!ulong == 19);
 
     auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue(5)), server._api);
-    writeln("r2: ", r2, " - ", r2.result.type);
     assert(r2.id == 1);
-    assert(r2.result.integer );// == 6);
-
+    assert(r2.result.integer == 6);
 }
 
-@test("## Working on executeMethod")
+@test("executeMethod returns boolean values")
 unittest {
-import std.stdio;
     auto sock = new FakeSocket;
     auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
 
-    auto r = executeMethod(RPCRequest(0, "retBool"), server._api);
-    writeln("r: ", r);
-    assert(r.id == 0);
-    // TODO: Bool is implicitly converting to ulong.
-    //assert(r.result == JSONValue(true));
+    auto r1 = executeMethod(RPCRequest(0, "retTrue"), server._api);
+    assert(r1.id == 0);
+    assert(r1.result == JSONValue(true));
 
-    auto r2 = executeMethod(RPCRequest(1, "retUlong", JSONValue("some string")), server._api);
-    writeln("r2: ", r2);
+    auto r2 = executeMethod(RPCRequest(1, "retFalse"), server._api);
+    assert(r2.id == 1);
+    assert(r2.result == JSONValue(false));
+}
 
-    auto r3 = executeMethod(RPCRequest(2, "void3params",
-            JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)), server._api);
-    writeln("r3: ", r3);
+@test("executeMethod returns string values")
+unittest {
+    auto sock = new FakeSocket;
+    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
 
-    auto r4 = executeMethod(RPCRequest(3, "voidArray", JSONValue([1, 2])), server._api);
-    writeln(r4);
-
-    executeMethod(RPCRequest(4, "voidFunc"), server._api);
+    auto r1 = executeMethod(RPCRequest(0, "retString"), server._api);
+    assert(r1.result.unwrapValue!string == "testing");
 }
 
 private:
