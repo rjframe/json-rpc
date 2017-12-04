@@ -7,7 +7,6 @@ module jsonrpc.jsonrpc;
 
 import std.json;
 import std.socket;
-public import std.typecons : Yes, No;
 
 import jsonrpc.exception;
 
@@ -80,12 +79,8 @@ struct RPCRequest {
         this.params = params;
     }
 
-    /** Convert the RPCRequest to a JSON string to pass to the server.
-
-        Params:
-            prettyPrint =   Yes/No flag to control presentation of the JSON.
-    */
-    string toJSONString(Flag!"prettyPrint" prettyPrint = No.prettyPrint) {
+    /** Convert the RPCRequest to a JSON string to pass to the server. */
+    string toJSONString() {
         import std.format : format;
         string ret =
 `{
@@ -98,7 +93,6 @@ struct RPCRequest {
         }
         ret ~= "\n}";
 
-        if (! prettyPrint) ret = ret.removeWhitespace;
         return ret;
     }
 
@@ -394,6 +388,19 @@ struct RPCResponse {
                 ("Response is missing 'id' and/or 'result' fields.");
             assert(0);
         }
+    }
+
+    /** Convert the RPCResponse to a JSON string to send to the client. */
+    string toJSONString() {
+        import std.format : format;
+        string ret =
+`{
+    "jsonrpc": "%s",
+    "result": %s,
+    "id": %s`.format(protocolVersion, result, _id);
+        ret ~= "\n}";
+
+        return ret;
     }
 }
 
