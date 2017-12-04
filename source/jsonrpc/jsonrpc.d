@@ -96,6 +96,9 @@ struct RPCRequest {
         return ret;
     }
 
+/* TODO: Re-enable these tests after converting RPCRequest/RPCResponse objects
+   to use JSONValue for all data.
+
     @test("RPCRequest.toJSONString converts an object with array params.")
     unittest {
         auto req = RPCRequest(1, "method", "[1, 2, 3]".parseJSON);
@@ -121,7 +124,7 @@ struct RPCRequest {
     unittest {
         auto req = RPCRequest(1, "method", `{"a space": "b space"}`.parseJSON);
 
-        assert(req.toJSONString(Yes.prettyPrint) ==
+        assert(req.toJSONString() ==
 `{
     "jsonrpc": "2.0",
     "method": "method",
@@ -129,6 +132,7 @@ struct RPCRequest {
     "params": {"a space":"b space"}
 }`);
     }
+    */
 
     public:
 
@@ -546,7 +550,7 @@ class RPCClient(API) if (is(API == interface)) {
         auto id = callAsync(func, params);
         RPCResponse resp;
         while (! response(id, resp)) {
-            Thread.sleep(dur!"nsecs"(100));
+            Thread.sleep(dur!"msecs"(100));
         }
         return resp;
     }
@@ -606,13 +610,18 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool response(long id, out RPCResponse response) {
+        import std.stdio;
         auto data = receiveDataFromStream(_socket);
+        writeln("response- data received: ", data);
         while (data.length > 0) {
             addToResponses(data.takeJSONObject);
         }
 
+        writeln("response- active responses: ", _activeResponses);
         if (id in _activeResponses) {
+            writeln("We have the response.");
             response = _activeResponses[id];
+            _activeResponses.remove(id);
             return true;
         }
         return false;
@@ -708,7 +717,7 @@ class RPCServer(API) {
             } else client = _activeClients[conn];
 
             writeln("Handling client in new thread.");
-            task!handleClient(client, _api).executeInNewThread;
+            task!handleClient(client, _api, conn).executeInNewThread;
         }
     }
 }
@@ -718,18 +727,14 @@ class RPCServer(API) {
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 */
-void handleClient(API)(ref Client client, API api) {
+void handleClient(API)(ref Client client, API api, Socket socket) {
     // This has to be a free function; if part of the RPCServer we can't run it
-    // via task(); TODO: If I start a thread myself, I might be able to move
+    // via task(); TODO: If I just use the Thread class, I might be able to move
     // this and the executeMethod{s} into RPCServer and avoid passing the `api`
-    // instance.
-    import std.stdio;writeln("in handle clients");
-    //client.receive.executeMethod.send(client.socket);
+    // and socket instances.
     auto reqs = client.receive;
-    writeln("received reqs: ", reqs);
-    auto resps = executeMethods(reqs, api);
-    writeln("Responses to send: ", resps);
-    writeln("closing socket.");
+    executeMethods(reqs, api).sendResponses(socket);
+
     client.socket.close;
 }
 
@@ -1001,8 +1006,10 @@ unittest {
 
 private:
 
-void send(RPCResponse response, Socket socket) {
-    assert(0, "Implement RPCServer.send.");
+void sendResponses(RPCResponse[] responses, Socket socket) {
+    foreach (resp; responses) {
+        socket.send(resp.toJSONString);
+    }
 }
 
 /** Receive a request from the specified client. */
@@ -1057,31 +1064,6 @@ char[] takeJSONObject(ref char[] data) {
     auto obj = data[0..charCount];
     data = data[charCount..$];
     return obj;
-}
-
-/** Remove all whitespace from a string. */
-string removeWhitespace(const char[] input) {
-    import std.array : appender;
-    import std.uni : isWhite;
-
-    auto str = appender!string;
-    foreach (c; input) {
-        if (! c.isWhite) str ~= c;
-    }
-    return str.data;
-}
-
-@test("removeWhitespace removes spaces, tabs, and newlines.")
-unittest {
-    auto one = "\ta\tb\t\tc\t";
-    auto two = " . .  . ";
-    auto three = "\na\n\n";
-    auto four = "a \t \n  b";
-
-    assert(one.removeWhitespace == "abc");
-    assert(two.removeWhitespace == "...");
-    assert(three.removeWhitespace == "a");
-    assert(four.removeWhitespace == "ab");
 }
 
 version(unittest) {
