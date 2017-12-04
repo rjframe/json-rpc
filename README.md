@@ -56,7 +56,7 @@ void main() {
 Current status:
 
 * The client should be good; needs some cleanup.
-* The server will execute functions, but only an empty response is returned.
+* The server will execute async functions.
 
 Documentation is currently in the docs/ folder and is not rebuilt with every
 commit; I'll host them properly it once the project is ready.
