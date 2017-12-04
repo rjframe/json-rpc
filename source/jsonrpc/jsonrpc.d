@@ -15,19 +15,19 @@ else private struct test { string name; }
 
 enum SocketBufSize = 4096;
 
-/** An RPC request constructed by the client to send to the RPC server. */
+/** An RPC request constructed by the client to send to the RPC server.
+
+    The RPCRequest contains the ID of the request, the method to call, and any
+    parameters to pass to the method.
+*/
 struct RPCRequest {
-    import std.typecons : Flag;
+    import std.typecons : Flag, Yes, No;
 
-    private:
-
-    long _id;
-    JSONValue _params;
-    string _method;
+    private JSONValue _data;
 
     package:
 
-    @test("Test RPCRequest constructor.")
+    @test("Test RPCRequest constructors.")
     unittest {
         auto req1 = new RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
         auto req2 = new RPCRequest(2, "some_method", `["abc", "def"]`);
@@ -74,84 +74,38 @@ struct RPCRequest {
     this(long id, string method, JSONValue params = JSONValue()) in {
         assert(method.length > 0);
     } body {
-        this._id = id;
-        this.method = method;
+        this._data["jsonrpc"] = "2.0";
+        this._data["id"] = id;
+        this._data["method"] = method;
         this.params = params;
     }
 
-    /** Convert the RPCRequest to a JSON string to pass to the server. */
-    string toJSONString() {
-        import std.format : format;
-        string ret =
-`{
-    "jsonrpc": "%s",
-    "method": "%s",
-    "id": %s`.format(protocolVersion, method, _id);
+    /** Convert the RPCRequest to a JSON string to pass to the server.
 
-        if (params.type != JSON_TYPE.NULL) {
-            ret ~= ",\n    \"params\": %s".format(_params.toJSON);
-        }
-        ret ~= "\n}";
-
-        return ret;
-    }
-
-/* TODO: Re-enable these tests after converting RPCRequest/RPCResponse objects
-   to use JSONValue for all data.
-
-    @test("RPCRequest.toJSONString converts an object with array params.")
-    unittest {
-        auto req = RPCRequest(1, "method", "[1, 2, 3]".parseJSON);
-        assert(req.toJSONString ==
-            `{"jsonrpc":"2.0","method":"method","id":1,"params":[1,2,3]}`);
-    }
-
-    @test("RPCRequest.toJSONString converts an object with Object params.")
-    unittest {
-        auto req = RPCRequest(1, "method", `{"a": "b"}`.parseJSON);
-        assert(req.toJSONString ==
-            `{"jsonrpc":"2.0","method":"method","id":1,"params":{"a":"b"}}`);
-    }
-
-    @test("RPCRequest.toJSONString converts an object with no params.")
-    unittest {
-        auto req = RPCRequest(1, "method");
-        assert(req.toJSONString ==
-            `{"jsonrpc":"2.0","method":"method","id":1}`);
-    }
-
-    @test("RPCRequest.toJSONString pretty-prints without modifying params objects.")
-    unittest {
-        auto req = RPCRequest(1, "method", `{"a space": "b space"}`.parseJSON);
-
-        assert(req.toJSONString() ==
-`{
-    "jsonrpc": "2.0",
-    "method": "method",
-    "id": 1,
-    "params": {"a space":"b space"}
-}`);
-    }
+        Params:
+            prettyPrint = Yes to pretty-print the JSON output; No for efficient
+                          output.
     */
+    string toJSONString(Flag!"prettyPrint" prettyPrint = No.prettyPrint) {
+        return _data.toJSON(prettyPrint);
+    }
 
     public:
 
-    /** The JSON-RPC protocol version. */
-    @property string protocolVersion() { return "2.0"; }
+    /** Get the JSON-RPC protocol version. */
+    @property string protocolVersion() { return _data["jsonrpc"].str; }
 
-    /** The ID of this request. */
-    @property long id() { return _id; }
+    /** Get the ID of this request. */
+    @property long id() { return _data["id"].integer; }
 
     /** Retrieve the method to execute on the RPC server. */
-    @property string method() { return _method; }
+    @property string method() { return _data["method"].str; }
 
     /** Specify the method to execute on the RPC server. */
-    @property void method(string val) {
-        _method = val;
-    }
+    @property void method(string val) { _data["method"] = val; }
 
     /** Retrieve the parameters that will be passed to the method. */
-    @property JSONValue params() { return _params; }
+    @property JSONValue params() { return _data["params"]; }
 
     /** Set the parameters to the remote method that will be called.
 
@@ -163,8 +117,8 @@ struct RPCRequest {
     {
         if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
                 && val.type != JSON_TYPE.NULL) {
-            _params = JSONValue([val]);
-        } else _params = val;
+            _data["params"] = JSONValue([val]);
+        } else _data["params"] = val;
     }
 
     /** Set the parameters to the remote method as a JSON string.
@@ -200,14 +154,20 @@ struct RPCRequest {
     */
     static package RPCRequest fromJSONString(const char[] str) {
         auto json = str.parseJSON;
-        if (json.type != JSON_TYPE.NULL && "id" in json && "method" in json) {
+        if (json.type != JSON_TYPE.NULL
+                && "id" in json && "method" in json
+                && "jsonrpc" in json) {
             if ("params" !in json) json["params"] = JSONValue();
-            return RPCRequest(json["id"].integer,
+            assert(json["jsonrpc"].str == "2.0",
+                    "JSON-RPC protocol version must be 2.0.");
+
+            return RPCRequest(
+                    json["id"].integer,
                     json["method"].str,
                     json["params"]);
         } else {
             raise!(InvalidDataReceivedException, str)
-                ("Response is missing 'id' and/or 'method' fields.");
+                ("Response is missing 'jsonrpc', 'id', and/or 'method' fields.");
             assert(0);
         }
     }
@@ -215,7 +175,7 @@ struct RPCRequest {
     @test("fromJSONString converts JSON to RPCRequest")
     unittest {
         auto req = RPCRequest.fromJSONString(
-                `{"id": 0, "method": "func", "params": [0, 1]}`);
+                `{"jsonrpc": "2.0", "id": 0, "method": "func", "params": [0, 1]}`);
         assert(req.id == 0, "Incorrect ID.");
         assert(req.method == "func", "Incorrect method.");
         assert(req.params.array == [JSONValue(0), JSONValue(1)],
@@ -227,15 +187,19 @@ struct RPCRequest {
         import std.exception : assertThrown;
         assertThrown!InvalidDataReceivedException(
                 RPCRequest.fromJSONString(
-                    `{"method": "func", "params": [0, 1]}`));
+                    `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`));
 
         assertThrown!InvalidDataReceivedException(
                 RPCRequest.fromJSONString(
-                    `{"id": 0, "params": [0, 1]}`));
+                    `{"id": 0, "method": "func", "params": [0, 1]}`));
+
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`));
 
         assertThrown!JSONException(
                 RPCRequest.fromJSONString(
-                    `{"id": "0", "method": "func", "params": [0, 1]}`));
+                    `{"jsonrpc": "2.0", "id": "0", "method": "func", "params": [0, 1]}`));
     }
 }
 
@@ -597,7 +561,7 @@ class RPCClient(API) if (is(API == interface)) {
                 ("Failed to send the entire request.");
 
         ++_nextId;
-        return req._id;
+        return req.id;
     }
 
     /** Check for a response from an asynchronous remote call.
