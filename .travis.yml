@@ -2,6 +2,10 @@ language: d
 sudo: false
 dist: trusty
 
+os:
+    - linux
+    - osx
+
 d:
     - dmd-2.077.0
     - dmd-2.076.1
