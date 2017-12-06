@@ -156,10 +156,8 @@ struct RPCRequest {
         auto json = str.parseJSON;
         if (json.type != JSON_TYPE.NULL
                 && "id" in json && "method" in json
-                && "jsonrpc" in json) {
+                && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
             if ("params" !in json) json["params"] = JSONValue();
-            assert(json["jsonrpc"].str == "2.0",
-                    "JSON-RPC protocol version must be 2.0.");
 
             return RPCRequest(
                     json["id"].integer,
@@ -205,12 +203,26 @@ struct RPCRequest {
 
 /** The RPC server's response sent to clients. */
 struct RPCResponse {
+
+    /** Construct an RPC response by taking a JSONValue response.
+
+        Params:
+            data =  The JSONValue data that comprises the response. It must be a
+                    valid JSON-RPC 2.0 response.
+    */
+    private this(JSONValue data) in {
+        assert("jsonrpc" in data && "id" in data
+                && ("result" in data).xor("error" in data),
+                "Malformed response: missing required field(s).");
+    } do {
+        _data = data;
+    }
+
     package:
 
-    long _id;
-    // Note: Only one of _result, _error will be present.
-    JSONValue _result;
-    Error _error;
+    // Note: Only one of result, _error will be present.
+    JSONValue _data;
+    Error _error; // TODO: This will be removed and placed in _data.
 
     /** Construct a response to send to the client.
 
@@ -220,19 +232,32 @@ struct RPCResponse {
             result =    The return value(s) of the method executed.
     */
     this(long id, JSONValue result) {
-        _id = id;
-        _result = result;
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
+        _data["result"] = result;
     }
 
-    /** Construct an error response to send to the client.
+    this(long id) {
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
+    }
 
-        Params:
-            id =    The ID of this response. This matches the relevant request.
-            error = The error information to send.
+    /** Attach an Error to an RPCResponse.
+
+        Example:
+            auto resp = RPCResponse(0).withError(myError);
     */
-    this(long id, Error error) {
-        _id = id;
-        _error = error;
+    static ref RPCResponse withError(ref RPCResponse, Error error) {
+        assert(0);
+    }
+
+    /** Attach an Error to an RPCResponse.
+
+        Example:
+            auto resp = RPCResponse(0).withError(ErrorCode.InvalidRequest);
+    */
+    static ref RPCResponse withError(ref RPCResponse, ErrorCode error) {
+        assert(0);
     }
 
     /** Construct a predefined error response to send to the client.
@@ -244,19 +269,20 @@ struct RPCResponse {
             error = The error information to send.
     */
     this(long id, ErrorCode error) {
-        _id = id;
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
         _error = Error(error);
     }
 
-    @property long id() { return _id; }
+    @property long id() { return _data["id"].integer; }
 
     public:
 
     /** The JSON-RPC protocol version. */
-    @property string protocolVersion() { return "2.0"; }
+    @property string protocolVersion() { return _data["jsonrpc"].str; }
 
     // TODO: I want to implicitly unwrap scalar values.
-    @property JSONValue result() { return _result; }
+    @property JSONValue result() { return _data["result"]; }
 
     /** Standard error codes.
 
@@ -278,6 +304,7 @@ struct RPCResponse {
     struct Error {
         private:
 
+        // TODO: Place _errorCode and _message into _data.
         int _errorCode;
         string _message;
         JSONValue _data;
@@ -349,11 +376,14 @@ struct RPCResponse {
     static package RPCResponse fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         // TODO: Parse error responses too.
-        if (json.type != JSON_TYPE.NULL && "id" in json && "result" in json) {
-            return RPCResponse(json["id"].integer, json["result"]);
+        if (json.type != JSON_TYPE.NULL
+                && "id" in json
+                && ("result" in json).xor("error" in json)
+                && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
+            return RPCResponse(json);
         } else {
             raise!(InvalidDataReceivedException, str)
-                ("Response is missing 'id' and/or 'result' fields.");
+                ("Response is missing required fields.");
             assert(0);
         }
     }
@@ -365,7 +395,7 @@ struct RPCResponse {
 `{
     "jsonrpc": "%s",
     "result": %s,
-    "id": %s`.format(protocolVersion, result, _id);
+    "id": %s`.format(protocolVersion, result, id);
         ret ~= "\n}";
 
         return ret;
@@ -469,16 +499,26 @@ class RPCClient(API) if (is(API == interface)) {
         }
 
         // TODO: Need to reconstruct arrays and AAs too.
-        auto returnVal = call(apiFunc, jsonArgs)._result;
+        auto returnVal = call(apiFunc, jsonArgs).result;
         static if (is(returnType: void)) {
+            assert(returnVal.type == JSON_TYPE.NULL,
+                    "Incorrect return value type; expected null");
             return;
         } else static if (isFloatingPoint!returnType) {
+            assert(returnVal.type == JSON_TYPE.FLOAT,
+                    "Incorrect return value type; expected float.");
             return cast(returnType)returnVal.floating;
         } else static if (isSigned!returnType) {
+            assert(returnVal.type == JSON_TYPE.INTEGER,
+                    "Incorrect return value type; expected long.");
             return cast(returnType)returnVal.integer;
         } else static if (isUnsigned!returnType) {
+            assert(returnVal.type == JSON_TYPE.UINTEGER,
+                    "Incorrect return value type; expected ulong.");
             return cast(returnType)returnVal.uinteger;
         } else static if (isSomeString!returnType) {
+            assert(returnVal.type == JSON_TYPE.STRING,
+                    "Incorrect return value type; expected string.");
             return cast(returnType)returnVal.str;
         }
     }
@@ -574,16 +614,12 @@ class RPCClient(API) if (is(API == interface)) {
         Returns: true if the response is ready; otherwise, false.
     */
     bool response(long id, out RPCResponse response) {
-        import std.stdio;
         auto data = receiveDataFromStream(_socket);
-        writeln("response- data received: ", data);
         while (data.length > 0) {
             addToResponses(data.takeJSONObject);
         }
 
-        writeln("response- active responses: ", _activeResponses);
         if (id in _activeResponses) {
-            writeln("We have the response.");
             response = _activeResponses[id];
             _activeResponses.remove(id);
             return true;
@@ -594,7 +630,7 @@ class RPCClient(API) if (is(API == interface)) {
     private void addToResponses(const char[] obj) {
         if (obj.length == 0) return;
         auto resp = RPCResponse.fromJSONString(obj);
-        _activeResponses[resp._id] = resp;
+        _activeResponses[resp.id] = resp;
         assert(resp.id in _activeResponses, "Object not added.");
     }
 }
@@ -855,6 +891,10 @@ private auto unwrapValue(T)(JSONValue value) pure {
     assert(0, "Non-scalar value cannot be unwrapped.");
 }
 
+private bool xor(T)(T left, T right) {
+    return left != right;
+}
+
 @test("unwrapValue retrieves scalar values from a JSONValue")
 ///
 unittest {
@@ -876,8 +916,6 @@ version(unittest) {
     // I can't create this in a unit test block, so we'll share the API among
     // tests.
     class MyAPI {
-        import std.stdio : writeln;
-
         bool voidFunc_called = false;
         bool void3params_called = false;
         bool voidArray_called = false;
@@ -1111,9 +1149,9 @@ unittest {
     auto sock = new FakeSocket;
     auto rpc = new RPCClient!RemoteFuncs(sock);
 
-    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     rpc.func1;
-    sock.receiveReturnValue = `{"id":1,"result":3}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":3}`;
     assert(rpc.func2(false, "hello") == 3);
 }
 
@@ -1124,9 +1162,9 @@ unittest {
     auto client = new RPCClient!MyAPI(sock);
 
     import std.json : JSONValue;
-    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
-    sock.receiveReturnValue = `{"id":1,"result":null}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":null}`;
     auto resp2 = client.call("func", JSONValue(3));
 }
 
@@ -1134,7 +1172,7 @@ unittest {
 unittest {
     interface MyAPI { void func(int val); }
     auto sock = new FakeSocket;
-    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     auto client = new RPCClient!MyAPI(sock);
 
     auto id = client.callAsync("func", `{ "val": 3 }`);
@@ -1146,7 +1184,7 @@ unittest {
 unittest {
     interface MyAPI { void func(int val1, int val2, int val3); }
     auto sock = new FakeSocket;
-    sock.receiveReturnValue = `{"id":0,"result":null}`;
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     auto client = new RPCClient!MyAPI(sock);
 
     auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
