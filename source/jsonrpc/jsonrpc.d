@@ -943,12 +943,31 @@ version(unittest) {
     }
 }
 
-@test("execRPCMethod executes RPC functions")
+@test("execRPCMethod executes void RPC functions")
 unittest {
     auto sock = new FakeSocket;
     auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
 
-    // Non-void methods.
+    auto r1 = execRPCMethod!(MyAPI, "void3params")
+            (RPCRequest(0, "void3params",
+                JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
+                server._api);
+    auto r2 = execRPCMethod!(MyAPI, "voidArray")
+            (RPCRequest(1, "voidArray", JSONValue([1, 2])), server._api);
+    auto r3 = execRPCMethod!(MyAPI, "voidFunc")
+            (RPCRequest(2, "voidFunc"), server._api);
+
+    assert(r1 == true && r2 == true && r3 == true);
+    assert(server._api.void3params_called == true
+            && server._api.voidArray_called == true
+            && server._api.voidFunc_called == true);
+}
+
+@test("execRPCMethod executes non-void RPC functions")
+unittest {
+    auto sock = new FakeSocket;
+    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+
     auto r1 = execRPCMethod!(MyAPI, "retBool")
             (RPCRequest(0, "retBool"), server._api);
     assert(r1 == true);
@@ -956,21 +975,6 @@ unittest {
     auto r2 = execRPCMethod!(MyAPI, "retUlong")
             (RPCRequest(1, "retUlong", JSONValue("some string")), server._api);
     assert(r2 == 19);
-
-    // Void methods.
-    auto r3 = execRPCMethod!(MyAPI, "void3params")
-            (RPCRequest(2, "void3params",
-                JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
-                server._api);
-    auto r4 = execRPCMethod!(MyAPI, "voidArray")
-            (RPCRequest(3, "voidArray", JSONValue([1, 2])), server._api);
-    auto r5 = execRPCMethod!(MyAPI, "voidFunc")
-            (RPCRequest(4, "voidFunc"), server._api);
-
-    assert(r3 == true && r4 == true && r5 == true);
-    assert(server._api.void3params_called == true
-            && server._api.voidArray_called == true
-            && server._api.voidFunc_called == true);
 }
 
 @test("executeMethod returns integral values")
