@@ -894,10 +894,6 @@ private auto unwrapValue(T)(JSONValue value) pure {
     assert(0, "Non-scalar value cannot be unwrapped.");
 }
 
-private bool xor(T)(T left, T right) {
-    return left != right;
-}
-
 @test("unwrapValue retrieves scalar values from a JSONValue")
 ///
 unittest {
@@ -913,6 +909,18 @@ unittest {
     auto fl = d.unwrapValue!float;
     assert(fl > 2.2 && fl < 2.4);
     assert(e.unwrapValue!bool == true);
+}
+
+private bool xor(T)(T left, T right) {
+    return left != right;
+}
+
+@test("xor is correct.")
+unittest {
+    assert(true.xor(false));
+    assert(false.xor(true));
+    assert(! true.xor(true));
+    assert(! false.xor(false));
 }
 
 version(unittest) {
@@ -1202,15 +1210,3 @@ unittest {
     // Do something with resp here.
 }
 
-/+ TODO - fake socket to accept client.
-@test("[DOCTEST] Start an RPCServer.")
-///
-unittest {
-    class MyAPI {
-        bool f() { return true; }
-    }
-
-    auto server = new RPCServer!MyAPI(new MyAPI, "127.0.0.1", 54321);
-    server.listen;
-}
-+/
