@@ -748,6 +748,8 @@ RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
 
 /** Execute an RPC method and return the server's response.
 
+    Only public members of the API object are callable as a remote function.
+
     Params:
         request =   The request from the client.
         api =       The class or struct containing the function to call.
@@ -756,10 +758,11 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
     import std.traits : isFunction;
     foreach(method; __traits(derivedMembers, API)) {
         mixin(
-            "enum isMethodAFunction = isFunction!(api." ~ method ~ ");\n"
+            "enum isMethodAPublicFunction =\n" ~
+            "   isFunction!(api." ~ method ~ ") &&\n" ~
+            "   __traits(getProtection, api." ~ method ~ ") == `public`;\n"
         );
-        // TODO: Only check public members.
-        static if (isMethodAFunction) {
+        static if (isMethodAPublicFunction) {
             if (method == request.method) {
                 auto retval = execRPCMethod!(API, method)(request, api);
                 return RPCResponse(request.id, JSONValue(retval));
@@ -913,13 +916,15 @@ unittest {
 }
 
 version(unittest) {
-    // I can't create this in a unit test block, so we'll share the API among
-    // tests.
     class MyAPI {
         bool voidFunc_called = false;
         bool void3params_called = false;
         bool voidArray_called = false;
         bool voidWithString_called = false;
+
+        private void dontCallThis() {
+            throw new Exception("Private members should not be callable.");
+        }
 
         bool retBool() { return true; }
         alias retTrue = retBool;
