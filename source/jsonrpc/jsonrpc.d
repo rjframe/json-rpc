@@ -480,7 +480,6 @@ class RPCClient(API) if (is(API == interface)) {
 
         import std.conv : text;
         import std.meta : AliasSeq;
-        import std.range : iota;
 
         mixin(
             "alias paramTypes = AliasSeq!(Parameters!(API."
@@ -491,7 +490,7 @@ class RPCClient(API) if (is(API == interface)) {
         );
 
         auto jsonArgs = JSONValue();
-        static foreach (i; iota(0, args.length)){
+        static foreach (i; 0..args.length) {
             assert(is(typeof(args[i]) == paramTypes[i]));
 
             mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
@@ -811,7 +810,6 @@ private auto execRPCMethod(API, string method)(RPCRequest request, API api) {
 private static string GenCaller(API, string method)() pure {
     import std.conv : text;
     import std.meta : AliasSeq;
-    import std.range : iota;
     import std.traits : Parameters, ParameterIdentifierTuple, ReturnType;
 
     mixin(
@@ -833,7 +831,7 @@ private static string GenCaller(API, string method)() pure {
         ~ "        vals = JSONValue(`[]`.parseJSON);\n";
 
     // Size the array to fit our data.
-    static foreach(i; iota(paramTypes.length)) {
+    static foreach(i; 0..paramTypes.length) {
         func ~=
           "        vals.array ~= JSONValue();\n";
     }
@@ -841,7 +839,7 @@ private static string GenCaller(API, string method)() pure {
     func ~=
           "        foreach (string key, val; args) {\n";
 
-    static foreach(i; iota(paramTypes.length)) {
+    static foreach(i; 0..paramTypes.length) {
         func ~=
           "            if (key == " ~ paramNames[i].stringof ~ ") "
         ~ "                vals[" ~ i.text ~ "] = val;\n";
@@ -864,7 +862,7 @@ private static string GenCaller(API, string method)() pure {
     func ~= "api." ~ method ~ "(";
 
     static if (paramTypes.length > 0) {
-        static foreach(i; iota(paramTypes.length)) {
+        static foreach(i; 0..paramTypes.length) {
             func ~=
                 "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
         }
