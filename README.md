@@ -67,6 +67,13 @@ commit; I'll host them properly it once the project is ready.
 * (tmp) IDs are required in requests; Notifications are not yet supported.
 * (tmp) Only TCP sockets are supported as a transport protocol.
 
+## Redesign plan
+
+* The server should not throw exceptions; it should provide a hook to log errors,
+  and send an error response to the client.
+* Pull the sockets in the client and server into a transport object; writing new
+  transports will allow supporting alternative protocols (HTTP, etc.).
+
 ## Testing
 
 The [tested](http://code.dlang.org/packages/tested) library is an optional
