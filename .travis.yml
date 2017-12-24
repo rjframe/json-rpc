@@ -7,7 +7,7 @@ os:
     - osx
 
 d:
-    - dmd-2.077.0
+    - dmd-2.077.1
     - dmd-2.076.1
 
 script:
