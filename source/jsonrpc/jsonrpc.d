@@ -415,7 +415,8 @@ class RPCClient(API) if (is(API == interface)) {
 
     long _nextId;
     Socket _socket;
-    RPCResponse[long] _activeResponses;
+    shared RPCResponse[long] _activeResponses;
+    Object _activeResponsesMutex = new Object();
 
     /** Instantiate an RPCClient with the specified Socket.
 
@@ -602,6 +603,14 @@ class RPCClient(API) if (is(API == interface)) {
                 raise!(FailedToSendDataException, len, data)
                 ("Failed to send the entire request.");
 
+        import core.thread : Thread;
+        new Thread({
+            auto data2 = receiveDataFromStream(_socket);
+            while (data2.length > 0) {
+                addToResponses(data2.takeJSONObject);
+            }
+        }).start;
+
         ++_nextId;
         return req.id;
     }
@@ -615,16 +624,17 @@ class RPCClient(API) if (is(API == interface)) {
 
         Returns: true if the response is ready; otherwise, false.
     */
-    bool response(long id, out RPCResponse response) {
-        auto data = receiveDataFromStream(_socket);
-        while (data.length > 0) {
-            addToResponses(data.takeJSONObject);
-        }
-
-        if (id in _activeResponses) {
-            response = _activeResponses[id];
-            _activeResponses.remove(id);
-            return true;
+    bool response(long id, out RPCResponse response) out {
+        assert(id !in _activeResponses);
+    } body {
+        synchronized(_activeResponsesMutex) {
+            auto responses = cast(RPCResponse[long])_activeResponses;
+            if (id in responses) {
+                response = responses[id];
+                responses.remove(id);
+                _activeResponses = cast(shared(RPCResponse[long]))responses;
+                return true;
+            }
         }
         return false;
     }
@@ -632,7 +642,9 @@ class RPCClient(API) if (is(API == interface)) {
     private void addToResponses(const char[] obj) {
         if (obj.length == 0) return;
         auto resp = RPCResponse.fromJSONString(obj);
-        _activeResponses[resp.id] = resp;
+        synchronized (_activeResponsesMutex) {
+            (cast(RPCResponse[long])_activeResponses)[resp.id] = resp;
+        }
         assert(resp.id in _activeResponses, "Object not added.");
     }
 }
