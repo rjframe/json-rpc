@@ -673,7 +673,6 @@ class RPCServer(API) {
 
     API _api;
     Socket _listener;
-    Client[Socket] _activeClients;
 
     /** Construct an RPCServer!API object.
 
@@ -734,14 +733,11 @@ class RPCServer(API) {
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 */
-void handleClient(API)(ref Client client, API api, Socket socket) {
-    // This has to be a free function; if part of the RPCServer we can't run it
-    // via task(); TODO: If I just use the Thread class, I might be able to move
-    // this and the executeMethod{s} into RPCServer and avoid passing the `api`
-    // and socket instances.
-    auto reqs = client.receive;
-    executeMethods(reqs, api).sendResponses(socket);
+void handleClient(API)(ref Client client, API api) {
+    auto reqs = client.receive();
+    executeMethods(reqs, api).sendResponses(client.socket);
 
+    client.socket.shutdown(SocketShutdown.BOTH);
     client.socket.close;
 }
 
@@ -1044,19 +1040,20 @@ RPCRequest[] receive(Client client) {
     while (data.length > 0) {
         reqs ~= RPCRequest.fromJSONString(takeJSONObject(data));
     }
-    return reqs; //RPCRequest.fromJSONString(obj);
+    return reqs;
 }
 
-char[] receiveDataFromStream(ref Socket socket) {
+char[] receiveDataFromStream(Socket socket) {
     char[SocketBufSize] buf;
+    char[] data;
     ptrdiff_t returnedBytes;
     returnedBytes = socket.receive(buf);
-    if (returnedBytes > 0) {
-        return buf[0..returnedBytes].dup;
-    } else {
-        char[] emptyChar;
-        return emptyChar;
+    while (returnedBytes != Socket.ERROR && returnedBytes > 0) {
+        data ~= buf[0..returnedBytes];
+        // FIXME: Why does this seem to block?
+        returnedBytes = socket.receive(buf);
     }
+    return data.dup;
 }
 
 /** Take the first JSON object, parse it to a JSONValue, and remove it from
