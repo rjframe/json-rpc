@@ -645,7 +645,6 @@ class RPCClient(API) if (is(API == interface)) {
         synchronized (_activeResponsesMutex) {
             (cast(RPCResponse[long])_activeResponses)[resp.id] = resp;
         }
-        assert(resp.id in _activeResponses, "Object not added.");
     }
 }
 
