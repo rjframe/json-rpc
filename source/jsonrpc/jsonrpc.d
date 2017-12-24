@@ -13,12 +13,13 @@ import jsonrpc.exception;
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
-enum SocketBufSize = 4096;
+private enum SocketBufSize = 4096;
 
 /** An RPC request constructed by the client to send to the RPC server.
 
     The RPCRequest contains the ID of the request, the method to call, and any
-    parameters to pass to the method.
+    parameters to pass to the method. You should not need to manually create an
+    RPCRequest object; the RPCClient will do this for you.
 */
 struct RPCRequest {
     import std.typecons : Flag, Yes, No;
@@ -375,7 +376,6 @@ struct RPCResponse {
     */
     static package RPCResponse fromJSONString(const char[] str) {
         auto json = str.parseJSON;
-        // TODO: Parse error responses too.
         if (json.type != JSON_TYPE.NULL
                 && "id" in json
                 && ("result" in json).xor("error" in json)
@@ -437,8 +437,7 @@ class RPCClient(API) if (is(API == interface)) {
     this(string host, ushort port) in {
         assert(host.length > 0);
     } body {
-        _socket = new TcpSocket(getAddress(host, port)[0]);
-        _socket.blocking = false;
+        this(new TcpSocket(getAddress(host, port)[0]));
     }
 
     /** Make a blocking remote call with natural syntax.
@@ -494,14 +493,16 @@ class RPCClient(API) if (is(API == interface)) {
             assert(is(typeof(args[i]) == paramTypes[i]));
 
             mixin("jsonArgs[\"" ~ paramNames[i] ~ "\"] = JSONValue(args[" ~
-                    i.text ~ "]);");
+                    i.text ~ "]);\n");
         }
 
         // TODO: Need to reconstruct arrays and AAs too.
         auto returnVal = call(apiFunc, jsonArgs).result;
         static if (is(returnType: void)) {
-            assert(returnVal.type == JSON_TYPE.NULL,
-                    "Incorrect return value type; expected null");
+            // TODO: Keep this assertion; I'm returning `true` at the moment
+            // though.
+            //assert(returnVal.type == JSON_TYPE.NULL,
+             //       "Incorrect return value type; expected null");
             return;
         } else static if (isFloatingPoint!returnType) {
             assert(returnVal.type == JSON_TYPE.FLOAT,
@@ -591,6 +592,8 @@ class RPCClient(API) if (is(API == interface)) {
     /// ditto
     long callAsync(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
+        assert(_nextId !in _activeResponses,
+                "Cannot send a response with an ID already sent and active.");
     } body {
         auto req = RPCRequest(_nextId, func, params);
         auto data = req.toJSONString;
@@ -701,22 +704,15 @@ class RPCServer(API) {
     /** Listen for and respond to connections. */
     void listen(int maxQueuedConnections = 10) {
         import std.parallelism : task;
-        import std.stdio;
 
         _listener.listen(maxQueuedConnections);
         while (true) {
+            import std.stdio;
             auto conn = _listener.accept;
-            writeln("accepted connection: ", conn);
-
-            Client client;
-            if (conn !in _activeClients) {
-                writeln("new client");
-                client = Client(conn);
-                _activeClients[conn] = client;
-            } else client = _activeClients[conn];
-
-            writeln("Handling client in new thread.");
-            task!handleClient(client, _api, conn).executeInNewThread;
+            writeln("+ Accepted connection: ", conn);
+            auto client = Client(conn);
+            writeln("+ Handling request in new thread...");
+            task!handleClient(client, _api).executeInNewThread;
         }
     }
 }
@@ -820,7 +816,7 @@ private static string GenCaller(API, string method)() pure {
      );
 
     // TODO: Validate against API - if a named param is passed that isn't on the
-    // method we need to throw/return an error response. See execRPCMethod.
+    // method we need to return an error response. See execRPCMethod.
     // TODO: The assertion probably needs to be an exception.
     string func =
             "\nauto ref callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
