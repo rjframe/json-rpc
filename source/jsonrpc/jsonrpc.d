@@ -617,12 +617,16 @@ class RPCClient(API) if (is(API == interface)) {
 
     /** Check for a response from an asynchronous remote call.
 
+        If the response is present, it is removed from the list of received
+        responses; e.g., if calling `response` on a given `id` returns true,
+        subsequent calls will return false.
+
         Params:
             id =       The ID of the request for which to check for a response.
             response = A RPCResponse object in which to return the response if
                        available.
 
-        Returns: true if the response is ready; otherwise, false.
+        Returns: true if the response has been received; otherwise, false.
     */
     bool response(long id, out RPCResponse response) out {
         assert(id !in _activeResponses);
@@ -798,7 +802,7 @@ private auto execRPCMethod(API, string method)(RPCRequest request, API api) {
     assert(0, "Should have returned by now.");
 }
 
-/** Generate the code to a function that will call the API function
+/** Generate the function `callRPCFunc` that will call the API function
     specified by the client and return its return value, if present.
 
     Parameters are provided as a JSONValue array or Object; Objects will be
