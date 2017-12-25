@@ -959,48 +959,48 @@ version(unittest) {
 @test("execRPCMethod executes void RPC functions")
 unittest {
     auto sock = new FakeSocket;
-    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+    auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "void3params")
             (RPCRequest(0, "void3params",
                 JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
-                server._api);
+                api);
     auto r2 = execRPCMethod!(MyAPI, "voidArray")
-            (RPCRequest(1, "voidArray", JSONValue([1, 2])), server._api);
+            (RPCRequest(1, "voidArray", JSONValue([1, 2])), api);
     auto r3 = execRPCMethod!(MyAPI, "voidFunc")
-            (RPCRequest(2, "voidFunc"), server._api);
+            (RPCRequest(2, "voidFunc"), api);
 
     assert(r1 == true && r2 == true && r3 == true);
-    assert(server._api.void3params_called == true
-            && server._api.voidArray_called == true
-            && server._api.voidFunc_called == true);
+    assert(api.void3params_called == true
+            && api.voidArray_called == true
+            && api.voidFunc_called == true);
 }
 
 @test("execRPCMethod executes non-void RPC functions")
 unittest {
     auto sock = new FakeSocket;
-    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+    auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "retBool")
-            (RPCRequest(0, "retBool"), server._api);
+            (RPCRequest(0, "retBool"), api);
     assert(r1 == true);
 
     auto r2 = execRPCMethod!(MyAPI, "retUlong")
-            (RPCRequest(1, "retUlong", JSONValue("some string")), server._api);
+            (RPCRequest(1, "retUlong", JSONValue("some string")), api);
     assert(r2 == 19);
 }
 
 @test("executeMethod returns integral values")
 unittest {
     auto sock = new FakeSocket;
-    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+    auto api = new MyAPI();
 
     auto r1 = executeMethod(RPCRequest(0, "retUlong",
-            JSONValue("some string")), server._api);
+            JSONValue("some string")), api);
     assert(r1.id == 0);
     assert(r1.result.unwrapValue!ulong == 19);
 
-    auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue(5)), server._api);
+    auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue(5)), api);
     assert(r2.id == 1);
     assert(r2.result.integer == 6);
 }
@@ -1008,13 +1008,13 @@ unittest {
 @test("executeMethod returns boolean values")
 unittest {
     auto sock = new FakeSocket;
-    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+    auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest(0, "retTrue"), server._api);
+    auto r1 = executeMethod(RPCRequest(0, "retTrue"), api);
     assert(r1.id == 0);
     assert(r1.result == JSONValue(true));
 
-    auto r2 = executeMethod(RPCRequest(1, "retFalse"), server._api);
+    auto r2 = executeMethod(RPCRequest(1, "retFalse"), api);
     assert(r2.id == 1);
     assert(r2.result == JSONValue(false));
 }
@@ -1022,9 +1022,9 @@ unittest {
 @test("executeMethod returns string values")
 unittest {
     auto sock = new FakeSocket;
-    auto server = new RPCServer!MyAPI(new MyAPI, sock, "127.0.0.1", 54321);
+    auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest(0, "retString"), server._api);
+    auto r1 = executeMethod(RPCRequest(0, "retString"), api);
     assert(r1.result.unwrapValue!string == "testing");
 }
 
