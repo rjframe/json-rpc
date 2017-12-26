@@ -55,11 +55,12 @@ void main() {
 
 Current status:
 
-* The client should be good; needs some cleanup.
+* This is currently not usable.
 * The server will execute async functions.
+* I'm also experimenting with more of a promise/future API instead.
 
-Documentation is currently in the docs/ folder and is not rebuilt with every
-commit; I'll host them properly it once the project is ready.
+Documentation is currently in the docs/ folder and is not rebuilt often; I'll
+host them properly it once the project is ready.
 
 ## Non-conforming details
 
@@ -73,6 +74,8 @@ commit; I'll host them properly it once the project is ready.
   and send an error response to the client.
 * Pull the sockets in the client and server into a transport object; writing new
   transports will allow supporting alternative protocols (HTTP, etc.).
+* Need to support a function registry on the server, and runtime function lists
+  on the client.
 
 ## Testing
 
