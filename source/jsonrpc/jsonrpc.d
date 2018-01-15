@@ -529,7 +529,7 @@ class RPCClient(API) if (is(API == interface)) {
         import core.thread : Thread;
         import core.time : dur;
 
-        auto req = RPCRequest(_nextId, func, params);
+        auto req = RPCRequest(_nextId++, func, params);
         auto data = req.toJSONString();
 
         ptrdiff_t bytesSent = 0;
