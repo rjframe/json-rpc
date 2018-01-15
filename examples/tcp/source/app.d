@@ -6,7 +6,7 @@ enum ushort port = 54321;
 
 interface API {
     void printHello();
-    int printGreeting(string name);
+    ulong printGreeting(string name);
 }
 
 class ServeFunctions {
