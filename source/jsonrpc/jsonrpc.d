@@ -935,35 +935,34 @@ char[] receiveJSONObject(Socket socket) {
     char[] data;
     ptrdiff_t receivedBytes = 0;
 
-    // TODO: This logic can be simplified.
     receivedBytes = socket.receive(buf);
-    if (receivedBytes > 0) {
-        data = buf[0..receivedBytes].dup;
-        if (data[0] != '{') raise!(InvalidDataReceivedException)
-            ("Expected to receive a '{' to begin a new JSON object.");
+    if (receivedBytes <= 0) { return data; } // TODO: Throw on no input data?
 
-        // Count the braces we receive. If we don't have a full object, receive
-        // until we do.
-        int braceCount = 0;
-        size_t totalLoc = 0;
+    data = buf[0..receivedBytes].dup;
+    if (data[0] != '{') raise!(InvalidDataReceivedException)
+        ("Expected to receive a '{' to begin a new JSON object.");
+
+    // Count the braces we receive. If we don't have a full object, receive
+    // until we do.
+    int braceCount = 0;
+    size_t totalLoc = 0;
+    while(true) {
+        size_t loc = 0;
         do {
-            size_t loc = 0;
-            do {
-                if (data[totalLoc] == '{') ++braceCount;
-                else if (data[totalLoc] == '}') --braceCount;
-                ++loc;
-                ++totalLoc;
-            } while (loc < receivedBytes);
+            if (data[totalLoc] == '{') ++braceCount;
+            else if (data[totalLoc] == '}') --braceCount;
+            ++loc;
+            ++totalLoc;
+        } while (loc < receivedBytes);
 
-            if (braceCount > 0) {
-                receivedBytes = socket.receive(buf);
-                if (receivedBytes > 0) {
-                    data ~= buf[0..receivedBytes].dup;
-                }
+        // If we receive an incomplete object, get more data and repeat as needed.
+        if (braceCount > 0) {
+            receivedBytes = socket.receive(buf);
+            if (receivedBytes > 0) {
+                data ~= buf[0..receivedBytes].dup;
             }
-        } while (braceCount > 0);
-    } // TODO: Throw on no input data?
-    return data;
+        } else return data;
+    }
 }
 
 version(unittest) {
