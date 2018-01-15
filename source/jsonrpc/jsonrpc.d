@@ -498,28 +498,8 @@ class RPCClient(API) if (is(API == interface)) {
         // TODO: Need to reconstruct arrays and AAs too.
         auto returnVal = call(apiFunc, jsonArgs).result;
         static if (is(returnType: void)) {
-            // TODO: Keep this assertion; I'm returning `true` at the moment
-            // though.
-            //assert(returnVal.type == JSON_TYPE.NULL,
-             //       "Incorrect return value type; expected null");
             return;
-        } else static if (isFloatingPoint!returnType) {
-            assert(returnVal.type == JSON_TYPE.FLOAT,
-                    "Incorrect return value type; expected float.");
-            return cast(returnType)returnVal.floating;
-        } else static if (isSigned!returnType) {
-            assert(returnVal.type == JSON_TYPE.INTEGER,
-                    "Incorrect return value type; expected long.");
-            return cast(returnType)returnVal.integer;
-        } else static if (isUnsigned!returnType) {
-            assert(returnVal.type == JSON_TYPE.UINTEGER,
-                    "Incorrect return value type; expected ulong.");
-            return cast(returnType)returnVal.uinteger;
-        } else static if (isSomeString!returnType) {
-            assert(returnVal.type == JSON_TYPE.STRING,
-                    "Incorrect return value type; expected string.");
-            return cast(returnType)returnVal.str;
-        }
+        } else return unwrapValue!(returnType)(returnVal);
     }
 
     /** Make a function call on the RPC server.
@@ -784,7 +764,14 @@ private auto unwrapValue(T)(JSONValue value) pure {
     } else static if (isSigned!T) {
         return cast(T)value.integer;
     } else static if (isUnsigned!T) {
-        return cast(T)value.uinteger;
+        // TODO: There has to be a better way to do all of this.
+        // Positive signed values will take this branc, rather than the
+        // isSigned! branch.
+        try {
+            return cast(T)value.uinteger;
+        } catch (JSONException e) {
+            return cast(T)value.integer;
+        }
     } else static if (isBoolean!T) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
