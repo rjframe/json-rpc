@@ -1,5 +1,5 @@
-import jsonrpc;
 import std.stdio;
+import jsonrpc;
 
 enum hostname = "127.0.0.1";
 enum ushort port = 54321;
@@ -12,7 +12,7 @@ interface API {
 class ServeFunctions {
     void printHello() { writeln("Hello."); }
 
-    int printGreeting(string name) {
+    ulong printGreeting(string name) {
         writeln("Hello, " ~ name);
         return name.length;
     }
@@ -23,6 +23,7 @@ void main(string[] args)
     import core.thread : Thread;
     import core.time : dur;
 
+    writeln("Starting server...");
     auto t = new Thread({
         auto rpc = new RPCServer!ServeFunctions(hostname, port);
         rpc.listen;
@@ -30,17 +31,13 @@ void main(string[] args)
     t.isDaemon = true;
     t.start;
 
-    Thread.sleep(dur!"seconds"(3));
+    Thread.sleep(dur!"seconds"(2));
+
+    writeln("Starting client...");
     auto client = new RPCClient!API(hostname, port);
 
-    import std.json;
-    auto a = client.callAsync("printHello");
-    auto b = client.callAsync("printGreeting", JSONValue("Some Person!"));
-    assert(b.result == JSONValue(3));
-    Thread.sleep(dur!"seconds"(3));
-
     client.printHello();
-    auto len = client.printGreeting("again!");
+    auto len = client.printGreeting("Some Person!");
     assert(len == "Some Person!".length);
-    Thread.sleep(dur!"seconds"(3));
+    writeln("Press ^C to exit.");
 }

@@ -382,8 +382,8 @@ struct RPCResponse {
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
             return RPCResponse(json);
         } else {
-            raise!(InvalidDataReceivedException, str)
-                ("Response is missing required fields.");
+            raise!(InvalidDataReceivedException, json, str)
+                ("JSON Response is missing required fields.");
             assert(0);
         }
     }
@@ -415,15 +415,13 @@ class RPCClient(API) if (is(API == interface)) {
 
     long _nextId;
     Socket _socket;
-    shared RPCResponse[long] _activeResponses;
-    Object _activeResponsesMutex = new Object();
 
     /** Instantiate an RPCClient with the specified Socket.
 
         The socket will be set to non-blocking. This is designed for testing.
     */
     this(Socket socket) {
-        socket.blocking = false;
+        socket.blocking = true;
         _socket = socket;
     }
 
@@ -545,119 +543,24 @@ class RPCClient(API) if (is(API == interface)) {
             auto resp2 = client.call("func", JSONValue(3));
     */
     // TODO: Include an optional timeout.
-    // TODO: Experiment w/ sleep value. Make it a parameter?
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
         import core.thread : Thread;
         import core.time : dur;
 
-        auto id = callAsync(func, params);
-        RPCResponse resp;
-        while (! response(id, resp)) {
-            Thread.sleep(dur!"msecs"(100));
-        }
-        return resp;
-    }
-
-    /** Make a non-blocking remote function call.
-
-        Use the returned request ID to obtain the server's response.
-
-        Params:
-            func =  The name of the remote function to call.
-            params = A valid JSON array or Object containing the function
-                     parameters.
-
-        Throws:
-            std.json.JSONException if the string cannot be parsed as JSON.
-
-        Returns: The ID of the request. This ID will be necessary to later
-                 retrieve the server response.
-
-        Example:
-            interface MyAPI { void func(int val); }
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-
-            auto id = client.callAsync("func", `{ "val": 3 }`);
-            RPCResponse resp;
-            while (! client.response(id, resp)) { /+ wait for it... +/ }
-            // Do something with resp here.
-    */
-    long callAsync(string func, string params) in {
-        assert(func.length > 0);
-    } body {
-        return callAsync(func, params.parseJSON);
-    }
-
-    /// ditto
-    long callAsync(string func, JSONValue params = JSONValue()) in {
-        assert(func.length > 0);
-        assert(_nextId !in _activeResponses,
-                "Cannot send a response with an ID already sent and active.");
-    } body {
         auto req = RPCRequest(_nextId, func, params);
-        auto data = req.toJSONString;
-        auto len = _socket.send(data);
-        if (len != data.length)
-                raise!(FailedToSendDataException, len, data)
-                ("Failed to send the entire request.");
+        auto data = req.toJSONString();
 
-        import core.thread : Thread;
-        new Thread({
-            auto data2 = receiveDataFromStream(_socket);
-            while (data2.length > 0) {
-                addToResponses(data2.takeJSONObject);
-            }
-        }).start;
-
-        ++_nextId;
-        return req.id;
-    }
-
-    /** Check for a response from an asynchronous remote call.
-
-        If the response is present, it is removed from the list of received
-        responses; e.g., if calling `response` on a given `id` returns true,
-        subsequent calls will return false.
-
-        Params:
-            id =       The ID of the request for which to check for a response.
-            response = A RPCResponse object in which to return the response if
-                       available.
-
-        Returns: true if the response has been received; otherwise, false.
-    */
-    bool response(long id, out RPCResponse response) out {
-        assert(id !in _activeResponses);
-    } body {
-        synchronized(_activeResponsesMutex) {
-            auto responses = cast(RPCResponse[long])_activeResponses;
-            if (id in responses) {
-                response = responses[id];
-                responses.remove(id);
-                _activeResponses = cast(shared(RPCResponse[long]))responses;
-                return true;
-            }
+        ptrdiff_t bytesSent = 0;
+        while (bytesSent < data.length) {
+            auto sent = _socket.send(data[bytesSent..$]);
+            if (sent == Socket.ERROR || sent == 0) break;
+            bytesSent += sent;
         }
-        return false;
-    }
 
-    private void addToResponses(const char[] obj) {
-        if (obj.length == 0) return;
-        auto resp = RPCResponse.fromJSONString(obj);
-        synchronized (_activeResponsesMutex) {
-            (cast(RPCResponse[long])_activeResponses)[resp.id] = resp;
-        }
-    }
-}
-
-struct Client {
-    Socket socket;
-    RPCRequest[long] activeRequests;
-
-    this(ref Socket socket) {
-        this.socket = socket;
+        auto respObj = receiveJSONObject(_socket);
+        return RPCResponse.fromJSONString(respObj);
     }
 }
 
@@ -686,7 +589,9 @@ class RPCServer(API) {
         _api = api;
         _listener = socket;
         _listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        _listener.blocking = true;
         _listener.bind(getAddress(host, port)[0]);
+        // TODO: This should be an exception.
         assert(_listener.isAlive, "Listening socket not active.");
     }
 
@@ -721,35 +626,25 @@ class RPCServer(API) {
 
         _listener.listen(maxQueuedConnections);
         while (true) {
-            import std.stdio;
             auto conn = _listener.accept;
-            writeln("+ Accepted connection: ", conn);
-            auto client = Client(conn);
-            writeln("+ Handling request in new thread...");
-            task!handleClient(client, _api).executeInNewThread;
+            task!handleClient(conn, _api).executeInNewThread;
         }
     }
 }
 
-/** Handles a client's requests.
+/** Handles all of an individual client's requests.
 
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 */
-void handleClient(API)(ref Client client, API api) {
-    auto reqs = client.receive();
-    executeMethods(reqs, api).sendResponses(client.socket);
-
-    client.socket.shutdown(SocketShutdown.BOTH);
-    client.socket.close;
-}
-
-RPCResponse[] executeMethods(API)(RPCRequest[] requests, API api) {
-    RPCResponse[] responses;
-    foreach (req; requests) {
-        responses ~= executeMethod(req, api);
+void handleClient(API)(Socket client, API api) {
+    // TODO: On error, close the socket.
+    while (true) {
+        auto req = RPCRequest.fromJSONString(receiveJSONObject(client));
+        executeMethod(req, api).sendResponse(client);
     }
-    return responses;
+    //client.shutdown(SocketShutdown.BOTH);
+    //client.close;
 }
 
 /** Execute an RPC method and return the server's response.
@@ -893,7 +788,8 @@ private auto unwrapValue(T)(JSONValue value) pure {
     } else static if (isBoolean!T) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
-        assert(0, "Expected boolean, but type is " ~ value.type); // TODO: Make this an exception.
+        // TODO: Make this an exception.
+        assert(0, "Expected boolean, but type is " ~ value.type);
     }
     // TODO: make this an exception.
     assert(0, "Non-scalar value cannot be unwrapped.");
@@ -1030,65 +926,44 @@ unittest {
 
 private:
 
-void sendResponses(RPCResponse[] responses, Socket socket) {
-    foreach (resp; responses) {
-        socket.send(resp.toJSONString);
-    }
+void sendResponse(RPCResponse response, Socket socket) {
+    socket.send(response.toJSONString);
 }
 
-/** Receive a request from the specified client. */
-RPCRequest[] receive(Client client) {
-    RPCRequest[] reqs;
-    auto data = receiveDataFromStream(client.socket);
-    while (data.length > 0) {
-        reqs ~= RPCRequest.fromJSONString(takeJSONObject(data));
-    }
-    return reqs;
-}
-
-char[] receiveDataFromStream(Socket socket) {
+char[] receiveJSONObject(Socket socket) {
     char[SocketBufSize] buf;
     char[] data;
-    ptrdiff_t returnedBytes;
-    returnedBytes = socket.receive(buf);
-    while (returnedBytes != Socket.ERROR && returnedBytes > 0) {
-        data ~= buf[0..returnedBytes];
-        // FIXME: Why does this seem to block?
-        returnedBytes = socket.receive(buf);
-    }
-    return data.dup;
-}
+    ptrdiff_t receivedBytes = 0;
 
-/** Take the first JSON object, parse it to a JSONValue, and remove it from
-    the input stream.
+    // TODO: This logic can be simplified.
+    receivedBytes = socket.receive(buf);
+    if (receivedBytes > 0) {
+        data = buf[0..receivedBytes].dup;
+        if (data[0] != '{') raise!(InvalidDataReceivedException)
+            ("Expected to receive a '{' to begin a new JSON object.");
 
-    Params:
-        data =  The data from which to take a JSON object.
+        // Count the braces we receive. If we don't have a full object, receive
+        // until we do.
+        int braceCount = 0;
+        size_t totalLoc = 0;
+        do {
+            size_t loc = 0;
+            do {
+                if (data[totalLoc] == '{') ++braceCount;
+                else if (data[totalLoc] == '}') --braceCount;
+                ++loc;
+                ++totalLoc;
+            } while (loc < receivedBytes);
 
-    Throws:
-        InvalidDataReceivedException if the object is known not to be a JSON
-        object. Note that the only validation is counting braces.
-*/
-char[] takeJSONObject(ref char[] data) {
-    char[] emptyChar;
-    if (data.length == 0) return emptyChar;
-
-    // We know that we're receiving a JSON object, so we just need to count
-    // '{' and '}' characters until we have a whole object.
-    if (data[0] != '{') raise!(InvalidDataReceivedException)
-        ("Expected to receive a '{' to begin a new JSON object.");
-
-    size_t charCount;
-    int braceCount;
-    do {
-        if (data[charCount] == '{') ++braceCount;
-        else if (data[charCount] == '}') --braceCount;
-        ++charCount;
-    } while (braceCount > 0);
-
-    auto obj = data[0..charCount];
-    data = data[charCount..$];
-    return obj;
+            if (braceCount > 0) {
+                receivedBytes = socket.receive(buf);
+                if (receivedBytes > 0) {
+                    data ~= buf[0..receivedBytes].dup;
+                }
+            }
+        } while (braceCount > 0);
+    } // TODO: Throw on no input data?
+    return data;
 }
 
 version(unittest) {
@@ -1190,29 +1065,3 @@ unittest {
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":null}`;
     auto resp2 = client.call("func", JSONValue(3));
 }
-
-@test("[DOCTEST] RPCClient example: callAsync passing params via JSON string.")
-unittest {
-    interface MyAPI { void func(int val); }
-    auto sock = new FakeSocket;
-    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
-    auto client = new RPCClient!MyAPI(sock);
-
-    auto id = client.callAsync("func", `{ "val": 3 }`);
-    RPCResponse resp;
-    while (! client.response(id, resp)) { /* wait for it... */ }
-}
-
-@test("[DOCTEST] RPCClient : callAsync passing params via JSONValue.")
-unittest {
-    interface MyAPI { void func(int val1, int val2, int val3); }
-    auto sock = new FakeSocket;
-    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
-    auto client = new RPCClient!MyAPI(sock);
-
-    auto id = client.callAsync("func", JSONValue([1 ,2, 3]));
-    RPCResponse resp;
-    while (! client.response(id, resp)) { /* wait for it... */ }
-    // Do something with resp here.
-}
-
