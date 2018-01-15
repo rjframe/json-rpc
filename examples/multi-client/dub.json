@@ -1,0 +1,12 @@
+{
+	"name": "multi-client",
+	"authors": [
+		"Ryan Frame"
+	],
+    "dependencies": {
+        "jsonrpc": { "path": "../../" }
+    },
+	"description": "Test JSON-RPC client/server with multiple clients.",
+	"copyright": "Copyright © 2018 Ryan Frame",
+	"license": "MIT"
+}
