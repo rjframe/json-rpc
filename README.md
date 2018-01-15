@@ -13,8 +13,8 @@ interface MyAPI {
 }
 
 // These are the callable functions.
-// Inheritance isn't necessary (this could be a struct too); it just lets the
-// compiler verify the API since we're in the same module.
+// Inheritance isn't necessary; it just lets the compiler verify the API since
+// we're in the same module.
 class APIImpl : MyAPI {
     bool x(int y) { return (y > 5); }
     void a(bool b, int c, string d) { return; }
@@ -37,27 +37,19 @@ void main() {
     // Now create a client.
     auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-    // These are blocking calls that return the function's response.
+    // These are calls that return the function's response.
     client.a(true, 2, "somestring");
     assert(client.x(3) == false);
     assert(client.i() == 100);
 
-    // `call` is blocking, but returns the RPCResponse from the server.
+    // `call` returns the RPCResponse from the server.
     auto resp2 = client.call(x, 3);
-
-    // Non-blocking calls are possible too.
-    auto id = client.callAsync(i);
-    RPCResponse asyncResponse;
-    while (! client.response(id, asyncResponse)) {}
-    // Do something with asyncResponse here.
 }
 ```
 
 Current status:
 
-* This is currently not usable.
-* The server will execute async functions.
-* I'm also experimenting with more of a promise/future API instead.
+* This is currently usable but not stable (so, usable-ish).
 
 Documentation is currently in the docs/ folder and is not rebuilt often; I'll
 host them properly it once the project is ready.
@@ -67,6 +59,7 @@ host them properly it once the project is ready.
 * (tmp) All IDs must be integral; JSON-RPC allows NULL and string IDs as well.
 * (tmp) IDs are required in requests; Notifications are not yet supported.
 * (tmp) Only TCP sockets are supported as a transport protocol.
+* (tmp) Batches are not supported.
 
 ## Redesign plan
 
@@ -75,7 +68,8 @@ host them properly it once the project is ready.
 * Pull the sockets in the client and server into a transport object; writing new
   transports will allow supporting alternative protocols (HTTP, etc.).
 * Need to support a function registry on the server, and runtime function lists
-  on the client.
+  on the client. The client especially shouldn't be required to know its API at
+  compile-time.
 
 ## Testing
 

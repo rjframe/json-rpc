@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.response</title>
+		<title>Function RPCResponse.toJSONString</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -39,36 +39,18 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.response</h1><p>Check for a response from an asynchronous remote call.
+			<h1>Function RPCResponse.toJSONString</h1><p>Convert the RPCResponse to a JSON string to send to the client.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">bool</span> <span class="pln">response</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">long</span> <span class="pln">id</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="kwd">out </span><a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">response</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="typ">string</span> <span class="pln">toJSONString
+			<span class="pun">()</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="id">id</td><td>       The ID of the request for which to check for a response.</td></tr>
-<tr><td id="response">response</td><td> A RPCResponse object in which to return the response if
-                       available.</td></tr>
-</table>
-</section>
-<section><h2>Returns</h2>
-<p>true if the response is ready; otherwise, false.
-</p>
-</section>
-
+			
+			
 			<footer>
 				<table class="license-info">
 					<tr>

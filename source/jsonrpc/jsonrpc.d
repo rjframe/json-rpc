@@ -2,7 +2,39 @@
 
     The JSON-RPC 2.0 specification may be found at
     $(LINK http&#58;//www.jsonrpc.org/specification)
-*/
+
+    Example:
+    --------------------------------------------
+    enum hostname = "127.0.0.1";
+    enum ushort port = 54321;
+
+    interface API {
+        long add(int a, int b);
+    }
+
+    class ServeFunctions {
+        long add(int a, int b) { return a + b; }
+    }
+
+    void main(string[] args)
+    {
+        import core.thread : Thread;
+        import core.time : dur;
+
+        auto t = new Thread({
+            auto rpc = new RPCServer!ServeFunctions(hostname, port);
+            rpc.listen;
+        });
+        t.isDaemon = true;
+        t.start;
+        Thread.sleep(dur!"seconds"(2));
+
+        auto client = new RPCClient!API(hostname, port);
+        assert(client.add(2, 2) == 4);
+        assert(client.add(5, 6) == 11);
+    }
+    --------------------------------------------
+ */
 module jsonrpc.jsonrpc;
 
 import std.json;

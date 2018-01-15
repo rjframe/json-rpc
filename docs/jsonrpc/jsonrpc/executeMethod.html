@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.callAsync</title>
+		<title>Function executeMethod</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -39,62 +39,31 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.callAsync</h1><p>Make a non-blocking remote function call.
+			<h1>Function executeMethod</h1><p>Execute an RPC method and return the server's response.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">long</span> <span class="pln">callAsync</span>
+			<a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">executeMethod</span>(API)
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
+			&nbsp;&nbsp;<a href="../../jsonrpc/jsonrpc/RPCRequest.html"><span class="typ">RPCRequest</span></a> <span class="pln">request</span><span class="pun">,</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">params</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-			<br/>
-			<br/>
-			<span class="typ">long</span> <span class="pln">callAsync</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span> <span class="pun">=</span> <span class="typ">JSONValue</span><span class="pun">()</span>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>Use the returned request ID to obtain the server's response.
+			<section><p>Only public members of the API object are callable as a remote function.
 </p>
 </section>
 
 			<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="func">func</td><td>  The name of the remote function to call.</td></tr>
-<tr><td id="params">params</td><td> A valid JSON array or Object containing the function
-                     parameters.</td></tr>
+<tr><td id="request">request</td><td>   The request from the client.</td></tr>
+<tr><td id="api">api</td><td>       The class or struct containing the function to call.</td></tr>
 </table>
-</section>
-<section><h2>Throws</h2>
-<p>std.json.JSONException if the string cannot be parsed as JSON.
-</p>
-</section>
-<section><h2>Returns</h2>
-<p>The ID of the request. This ID will be necessary to later
-                 retrieve the server response.
-</p>
-</section>
-<section><h2>Example</h2>
-<p>interface MyAPI { void func(int val); }
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-</p>
-
-<p>            auto id = client.callAsync("func", <code class="lang-d"><span class="pun">{ </span><span class="str">"val"</span><span class="pun">: </span><span class="lit">3 </span><span class="pun">}</span></code>);
-            RPCResponse resp;
-            while (! client.response(id, resp)) { /+ wait for it... +/ }
-            // Do something with resp here.
-</p>
 </section>
 
 			<footer>

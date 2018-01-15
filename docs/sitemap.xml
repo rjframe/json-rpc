@@ -8,13 +8,11 @@
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidParameterException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/raise.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/executeMethod.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/handleClient.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.call.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.callAsync.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.opDispatch.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.response.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.html</loc></url>
@@ -33,6 +31,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.ErrorCode.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.protocolVersion.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.toJSONString.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.listen.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.this.html</loc></url>
