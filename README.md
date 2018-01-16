@@ -23,16 +23,16 @@ class APIImpl : MyAPI {
 
 // We'll run this in a new thread for this example.
 void startServer(string host, string port) {
-    import core.thread : Thread;
-    import core.time : dur;
     auto server = new RPCServer!APIImpl(host, port);
     server.listen();
-    Thread.sleep(dur!"seconds"(3)); // Give it time to start up before connecting.
 }
 
 void main() {
+    import core.thread : Thread;
+    import core.time : dur;
     import std.parallelism : task;
     task!startServer("127.0.0.1", 54321).executeInNewThread;
+    Thread.sleep(dur!"seconds"(3)); // Give it time to start up before connecting.
 
     // Now create a client.
     auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
