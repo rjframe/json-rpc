@@ -70,6 +70,7 @@ host them properly it once the project is ready.
 * Need to support a function registry on the server, and runtime function lists
   on the client. The client especially shouldn't be required to know its API at
   compile-time.
+* The server doesn't construct error responses yet.
 
 ## Testing
 

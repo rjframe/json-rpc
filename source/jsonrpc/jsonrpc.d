@@ -40,6 +40,7 @@ module jsonrpc.jsonrpc;
 import std.json;
 import std.socket;
 
+import jsonrpc.transport;
 import jsonrpc.exception;
 
 version(Have_tested) import tested : test = name;
@@ -442,19 +443,20 @@ Params:
     API =   An interface containing the function definitions to call on the
             remote server.
 */
-class RPCClient(API) if (is(API == interface)) {
+class RPCClient(API, Transport = TCPTransport!API)
+        if (is(API == interface) && is(Transport == struct)) {
+
     private:
 
     long _nextId;
-    Socket _socket;
+    Transport _transport;
 
     /** Instantiate an RPCClient with the specified Socket.
 
         The socket will be set to non-blocking. This is designed for testing.
     */
-    this(Socket socket) {
-        socket.blocking = true;
-        _socket = socket;
+    this(Transport transport) {
+        _transport = transport;
     }
 
     public:
@@ -468,7 +470,7 @@ class RPCClient(API) if (is(API == interface)) {
     this(string host, ushort port) in {
         assert(host.length > 0);
     } body {
-        this(new TcpSocket(getAddress(host, port)[0]));
+        this(Transport(host, port));
     }
 
     /** Make a blocking remote call with natural syntax.
@@ -562,16 +564,9 @@ class RPCClient(API) if (is(API == interface)) {
         import core.time : dur;
 
         auto req = RPCRequest(_nextId++, func, params);
-        auto data = req.toJSONString();
+        _transport.send(req.toJSONString());
 
-        ptrdiff_t bytesSent = 0;
-        while (bytesSent < data.length) {
-            auto sent = _socket.send(data[bytesSent..$]);
-            if (sent == Socket.ERROR || sent == 0) break;
-            bytesSent += sent;
-        }
-
-        auto respObj = receiveJSONObject(_socket);
+        auto respObj = _transport.receiveJSONObject();
         return RPCResponse.fromJSONString(respObj);
     }
 }
@@ -984,72 +979,6 @@ char[] receiveJSONObject(Socket socket) {
     }
 }
 
-version(unittest) {
-    class FakeSocket : Socket {
-        private bool _blocking;
-        private bool _isAlive;
-
-        private char[] _receiveReturnValue =
-                cast(char[])`{"id":3,"result":[1,2,3]}`;
-
-        @property receiveReturnValue(string s) {
-            _receiveReturnValue = cast(char[])s;
-        }
-
-        @property char[] receiveReturnValue() { return _receiveReturnValue; }
-
-        override void bind(Address addr) { _isAlive = true; }
-
-        override const nothrow @nogc @property @trusted bool blocking() {
-            return _blocking;
-        }
-
-        override @property @trusted void blocking(bool byes) {
-            _blocking = byes;
-        }
-
-        override @trusted void setOption(SocketOptionLevel level,
-                SocketOption option, void[] value) {}
-
-        override const @property @trusted bool isAlive() { return _isAlive; }
-
-        override @trusted void listen(int backlog) { _isAlive = true; }
-
-        alias receive = Socket.receive;
-        override @trusted ptrdiff_t receive(void[] buf) {
-            if (buf.length == 0) return 0;
-            auto ret = fillBuffer(cast(char*)buf.ptr, buf.length);
-            _receiveReturnValue = _receiveReturnValue[ret..$];
-            return ret;
-        }
-
-        @test("FakeSocket.receive")
-        unittest {
-            auto s = new FakeSocket;
-            char[] buf = new char[](SocketBufSize);
-            s.receiveReturnValue = `{"id":3,"result":[1,2,3]}`;
-
-            auto len = s.receive(buf);
-            assert(buf[0..len] == `{"id":3,"result":[1,2,3]}`,
-                    "Incorrect data received: " ~ buf);
-        }
-
-        alias send = Socket.send;
-        override @trusted ptrdiff_t send(const(void)[] buf) {
-            return buf.length;
-        }
-
-        private @trusted ptrdiff_t fillBuffer(char* ptr, size_t length) {
-            char[] p = ptr[0..length];
-            ptrdiff_t cnt;
-            for (cnt = 0; cnt < receiveReturnValue.length; ++cnt) {
-                ptr[cnt] = receiveReturnValue[cnt];
-            }
-            return cnt;
-        }
-    }
-}
-
 @test("[DOCTEST] RPCClient example: opDispatch")
 unittest {
     interface RemoteFuncs {
@@ -1057,16 +986,12 @@ unittest {
         int func2(bool b, string s);
     }
 
-    class Funcs : RemoteFuncs {
-        void func1() { return; }
-        int func2(bool b, string s) { return 3; }
-    }
-
-    auto sock = new FakeSocket;
-    auto rpc = new RPCClient!RemoteFuncs(sock);
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!RemoteFuncs(sock);
+    auto rpc = new RPCClient!RemoteFuncs(transport);
 
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
-    rpc.func1;
+    rpc.func1();
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":3}`;
     assert(rpc.func2(false, "hello") == 3);
 }
@@ -1074,8 +999,9 @@ unittest {
 @test("[DOCTEST] RPCClient example: call")
 unittest {
     interface MyAPI { void func(int val); }
-    auto sock = new FakeSocket;
-    auto client = new RPCClient!MyAPI(sock);
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!MyAPI(sock);
+    auto client = new RPCClient!MyAPI(transport);
 
     import std.json : JSONValue;
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
