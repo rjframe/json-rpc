@@ -65,7 +65,6 @@ host them properly it once the project is ready.
 
 * The server should not throw exceptions; it should provide a hook to log errors,
   and send an error response to the client.
-* Pull the sockets in the client and server into a transport object; writing new
   transports will allow supporting alternative protocols (HTTP, etc.).
 * Need to support a function registry on the server, and runtime function lists
   on the client. The client especially shouldn't be required to know its API at
