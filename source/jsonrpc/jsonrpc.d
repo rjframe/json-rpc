@@ -495,7 +495,7 @@ class RPCClient(API, Transport = TCPTransport!API)
                 int func2(bool b, string s);
             }
 
-            auto rpc = new RPCClient!MyAPI("127.0.0.1", 54321);
+            auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
             rpc.func1();
             int retval = rpc.func2(false, "hello");
 
@@ -530,6 +530,7 @@ class RPCClient(API, Transport = TCPTransport!API)
         }
 
         // TODO: Need to reconstruct arrays and AAs too.
+        // TODO: Need to handle error responses as well.
         auto returnVal = call(apiFunc, jsonArgs).result;
         static if (is(returnType: void)) {
             return;
@@ -556,13 +557,9 @@ class RPCClient(API, Transport = TCPTransport!API)
             auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
             auto resp2 = client.call("func", JSONValue(3));
     */
-    // TODO: Include an optional timeout.
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        import core.thread : Thread;
-        import core.time : dur;
-
         auto req = RPCRequest(_nextId++, func, params);
         _transport.send(req.toJSONString());
 
@@ -627,7 +624,12 @@ class RPCServer(API) {
         this(api, new TcpSocket, host, port);
     }
 
-    /** Listen for and respond to connections. */
+    /** Listen for and respond to connections.
+
+        Params:
+            maxQueuedConnections = The maximum number of connections to hold in
+                                   the backlog before rejecting connections.
+    */
     void listen(int maxQueuedConnections = 10) {
         import std.parallelism : task;
 
@@ -792,7 +794,7 @@ private auto unwrapValue(T)(JSONValue value) pure {
         return cast(T)value.integer;
     } else static if (isUnsigned!T) {
         // TODO: There has to be a better way to do all of this.
-        // Positive signed values will take this branc, rather than the
+        // Positive signed values will take this branch, rather than the
         // isSigned! branch.
         try {
             return cast(T)value.uinteger;
@@ -962,7 +964,7 @@ char[] receiveJSONObject(Socket socket) {
     size_t totalLoc = 0;
     while(true) {
         size_t loc = 0;
-        do {
+        do { // TODO: This would likely be more clear as a for loop...
             if (data[totalLoc] == '{') ++braceCount;
             else if (data[totalLoc] == '}') --braceCount;
             ++loc;
