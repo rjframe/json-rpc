@@ -4,7 +4,6 @@ dist: trusty
 
 os:
     - linux
-    - osx
 
 d:
     - dmd-2.077.1
