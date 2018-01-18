@@ -46,8 +46,6 @@ import jsonrpc.exception;
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
-private enum SocketBufSize = 4096;
-
 /** An RPC request constructed by the client to send to the RPC server.
 
     The RPCRequest contains the ID of the request, the method to call, and any
@@ -451,9 +449,9 @@ class RPCClient(API, Transport = TCPTransport!API)
     long _nextId;
     Transport _transport;
 
-    /** Instantiate an RPCClient with the specified Socket.
+    /** Instantiate an RPCClient with the specified network transport.
 
-        The socket will be set to non-blocking. This is designed for testing.
+        This is designed to allow mock objects for testing.
     */
     this(Transport transport) {
         _transport = transport;
@@ -576,27 +574,27 @@ class RPCClient(API, Transport = TCPTransport!API)
         API =   A class or struct containing the functions available for the
                 client to call.
 */
-class RPCServer(API) {
+class RPCServer(API, Transport = TCPTransport!API)
+        if (is(API == class) && is(Transport == struct)) {
     import std.socket;
 
     private:
 
     API _api;
-    Socket _listener;
+    Transport _transport;
+    string _host;
+    ushort _port;
 
     /** Construct an RPCServer!API object.
 
         api =       The instantiated class or struct providing the RPC API.
         transport = The network transport to use.
     */
-    this(API api, Socket socket, string host, ushort port) {
+    this(API api, Transport transport, string host, ushort port) {
         _api = api;
-        _listener = socket;
-        _listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-        _listener.blocking = true;
-        _listener.bind(getAddress(host, port)[0]);
-        // TODO: This should be an exception.
-        assert(_listener.isAlive, "Listening socket not active.");
+        _host = host;
+        _port = port;
+        _transport = transport;
     }
 
     public:
@@ -611,7 +609,7 @@ class RPCServer(API) {
         port =  The port on which to listen.
     */
     this(string host, ushort port) {
-        this(new API(), new TcpSocket, host, port);
+        this(new API(), Transport(new TcpSocket()), host, port);
     }
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
@@ -621,7 +619,7 @@ class RPCServer(API) {
         port =  The port on which to listen.
     */
     this(API api, string host, ushort port) {
-        this(api, new TcpSocket, host, port);
+        this(api, Transport(new TcpSocket()), host, port);
     }
 
     /** Listen for and respond to connections.
@@ -631,13 +629,8 @@ class RPCServer(API) {
                                    the backlog before rejecting connections.
     */
     void listen(int maxQueuedConnections = 10) {
-        import std.parallelism : task;
-
-        _listener.listen(maxQueuedConnections);
-        while (true) {
-            auto conn = _listener.accept;
-            task!handleClient(conn, _api).executeInNewThread;
-        }
+        _transport.listen!(handleClient!API)(
+                _api, _host, _port, maxQueuedConnections);
     }
 }
 
@@ -646,14 +639,12 @@ class RPCServer(API) {
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 */
-void handleClient(API)(Socket client, API api) {
+void handleClient(API)(TCPTransport!API transport, API api) {
     // TODO: On error, close the socket.
     while (true) {
-        auto req = RPCRequest.fromJSONString(receiveJSONObject(client));
-        executeMethod(req, api).sendResponse(client);
+        auto req = RPCRequest.fromJSONString(transport.receiveJSONObject());
+        transport.send(executeMethod(req, api).toJSONString);
     }
-    //client.shutdown(SocketShutdown.BOTH);
-    //client.close;
 }
 
 /** Execute an RPC method and return the server's response.
@@ -941,45 +932,6 @@ unittest {
 }
 
 private:
-
-void sendResponse(RPCResponse response, Socket socket) {
-    socket.send(response.toJSONString);
-}
-
-char[] receiveJSONObject(Socket socket) {
-    char[SocketBufSize] buf;
-    char[] data;
-    ptrdiff_t receivedBytes = 0;
-
-    receivedBytes = socket.receive(buf);
-    if (receivedBytes <= 0) { return data; } // TODO: Throw on no input data?
-
-    data = buf[0..receivedBytes].dup;
-    if (data[0] != '{') raise!(InvalidDataReceivedException)
-        ("Expected to receive a '{' to begin a new JSON object.");
-
-    // Count the braces we receive. If we don't have a full object, receive
-    // until we do.
-    int braceCount = 0;
-    size_t totalLoc = 0;
-    while(true) {
-        size_t loc = 0;
-        do { // TODO: This would likely be more clear as a for loop...
-            if (data[totalLoc] == '{') ++braceCount;
-            else if (data[totalLoc] == '}') --braceCount;
-            ++loc;
-            ++totalLoc;
-        } while (loc < receivedBytes);
-
-        // If we receive an incomplete object, get more data and repeat as needed.
-        if (braceCount > 0) {
-            receivedBytes = socket.receive(buf);
-            if (receivedBytes > 0) {
-                data ~= buf[0..receivedBytes].dup;
-            }
-        } else return data;
-    }
-}
 
 @test("[DOCTEST] RPCClient example: opDispatch")
 unittest {

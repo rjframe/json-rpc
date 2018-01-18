@@ -83,6 +83,40 @@ struct TCPTransport(API) {
             } else return data;
         }
     }
+
+    // TODO: It makes sense to use separate transport objects for clients and
+    // servers; this would let me take the host and port in the constructor, etc.
+    // and just be a cleaner division of tasks, even though most functionality
+    // is the same.
+    // at compile-time;
+    /** Listen for client requests.
+
+        `listen` will call the specified handler function in a new thread to
+        handle each client it accepts.
+
+        Params:
+            api =                  An instantiated class with the methods to
+                                   execute.
+            host =                 The hostname of the server on which to listen.
+            port =                 The port on which to listen.
+            maxQueuedConnections = The maximum number of connections to backlog
+                                   before refusing connections.
+    */
+    void listen(alias handler)(
+            API api, string host, ushort port, int maxQueuedConnections = 10) {
+        import std.parallelism : task;
+
+        _socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        _socket.bind(getAddress(host, port)[0]);
+
+        _socket.listen(maxQueuedConnections);
+        // TODO: Make this an exception.
+        assert(_socket.isAlive, "Listening socket not active.");
+        while (true) {
+            auto conn = _socket.accept;
+            task!handler(TCPTransport(conn), api).executeInNewThread;
+        }
+    }
 }
 
 version(unittest) {
