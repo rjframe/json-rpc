@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.call</title>
+		<title>Struct TCPTransport</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,12 +30,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module selected">
+					<div class="module ">
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../../jsonrpc/transport.html">transport</a>
 					</div>
 				</li>
@@ -44,50 +44,79 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.call</h1><p>Make a function call on the RPC server.
+			<h1>Struct TCPTransport</h1><p>Manage TCP transport details for RPCClient objects.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">call</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">JSONValue</span> <span class="pln">params</span> <span class="pun">=</span> <span class="typ">JSONValue</span><span class="pun">()</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="kwd">struct</span> <span class="typ">TCPTransport</span>(API)
+			<span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="func">func</td><td>   The name of the remote function to call.</td></tr>
-<tr><td id="params">params</td><td> A valid JSON array or Object containing the function
-                     parameters.</td></tr>
-</table>
-</section>
-<section><h2>Throws</h2>
-<p>std.json.JSONException if the string cannot be parsed as JSON.
-</p>
-</section>
-<section><h2>Returns</h2>
-<p>The server's response.
-</p>
-</section>
-<section><h2>Example</h2>
-<p>interface MyAPI { void func(int val); }
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
-</p>
-
-<p>            import std.json : JSONValue;
-            auto resp = client.call("func", <code class="lang-d"><span class="pun">{ </span><span class="str">"val"</span><span class="pun">: </span><span class="lit">3 </span><span class="pun">}</span></code>.parseJSON);
-            auto resp2 = client.call("func", JSONValue(3));
-</p>
-</section>
-
+			
+			<section><h2>Constructors</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPTransport.this.html" class="public">
+								<code>this</code>
+							</a>
+						</td>
+						<td>This constructor is for unit testing.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPTransport.this.html" class="public">
+								<code>this</code>
+							</a>
+						</td>
+						<td>Instantiate a TCPTransport object.
+</td>
+					</tr>
+				</table>
+			</section>
+			<section><h2>Methods</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPTransport.listen.html" class="public">
+								<code>listen</code>
+							</a>
+						</td>
+						<td>Listen for client requests.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPTransport.receiveJSONObject.html" class="public">
+								<code>receiveJSONObject</code>
+							</a>
+						</td>
+						<td>Receive a single JSON object from the socket stream.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPTransport.send.html" class="public">
+								<code>send</code>
+							</a>
+						</td>
+						<td>Send the provided data and return the number of bytes sent.
+</td>
+					</tr>
+				</table>
+			</section>
+			
 			<footer>
 				<table class="license-info">
 					<tr>

@@ -34,6 +34,11 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
@@ -44,11 +49,11 @@ $('#symbolSearchPane').show();</script>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="kwd">class</span> <span class="typ">RPCClient</span>(API)
+			<span class="kwd">class</span> <span class="typ">RPCClient</span>(API, Transport)
 			<br/>
 			&nbsp;&nbsp;
 			<br/>
-			<span class="kwd">if</span> <span class="pun">(</span><span class="kwd">is</span><span class="pun">(</span><span class="pln">API </span><span class="pun">== </span><span class="kwd">interface</span><span class="pun">)</span><span class="pun">);</span>
+			<span class="kwd">if</span> <span class="pun">(</span><span class="kwd">is</span><span class="pun">(</span><span class="pln">API </span><span class="pun">== </span><span class="kwd">interface</span><span class="pun">) &amp;&amp; </span><span class="kwd">is</span><span class="pun">(</span><span class="typ">Transport </span><span class="pun">== </span><span class="kwd">struct</span><span class="pun">)</span><span class="pun">);</span>
 					</div>
 				</code>
 			</div>
@@ -68,7 +73,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Instantiate an RPCClient with the specified Socket.
+						<td>Instantiate an RPCClient with the specified network transport.
 </td>
 					</tr>
 					<tr>

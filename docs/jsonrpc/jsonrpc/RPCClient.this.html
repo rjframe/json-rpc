@@ -34,6 +34,11 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
@@ -53,7 +58,7 @@ $('#symbolSearchPane').show();</script>
 						</a>
 					</li>
 				</ul>
-			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified Socket.
+			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified network transport.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -61,13 +66,13 @@ $('#symbolSearchPane').show();</script>
 			<span class="pln">this</span>
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">Socket</span> <span class="pln">socket</span>
+			&nbsp;&nbsp;<span class="typ">Transport</span> <span class="pln">transport</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>The socket will be set to non-blocking. This is designed for testing.
+			<section><p>This is designed to allow mock objects for testing.
 </p>
 </section>
 

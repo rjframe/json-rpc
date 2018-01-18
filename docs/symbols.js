@@ -30,4 +30,10 @@ var symbols = [
 {name: 'jsonrpc.jsonrpc.RPCServer', kind: "classdeclaration", path: './jsonrpc/jsonrpc/RPCServer.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCServer.listen', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCServer.listen.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCServer.this', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/RPCServer.this.html', attributes: []},
+{name: 'jsonrpc.transport', kind: "module", path: './jsonrpc/transport.html', attributes: []},
+{name: 'jsonrpc.transport.TCPTransport', kind: "structdeclaration", path: './jsonrpc/transport/TCPTransport.html', attributes: []},
+{name: 'jsonrpc.transport.TCPTransport.listen', kind: "functiondeclaration", path: './jsonrpc/transport/TCPTransport.listen.html', attributes: []},
+{name: 'jsonrpc.transport.TCPTransport.receiveJSONObject', kind: "functiondeclaration", path: './jsonrpc/transport/TCPTransport.receiveJSONObject.html', attributes: []},
+{name: 'jsonrpc.transport.TCPTransport.send', kind: "functiondeclaration", path: './jsonrpc/transport/TCPTransport.send.html', attributes: []},
+{name: 'jsonrpc.transport.TCPTransport.this', kind: "functiondeclaration", path: './jsonrpc/transport/TCPTransport.this.html', attributes: []},
 ];

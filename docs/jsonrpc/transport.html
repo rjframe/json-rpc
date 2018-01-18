@@ -2,10 +2,10 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCResponse.Error.message</title>
-		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
-		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
-		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
+		<title>Module jsonrpc.transport</title>
+		<link rel="stylesheet" type="text/css" href="../styles/ddox.css"/>
+		<link rel="stylesheet" href="../prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="../scripts/jquery.js">/**/</script><script type="text/javascript" src="../scripts/ddox.js">/**/</script>
 	</head>
 	<body onload="setupDdox();">
 		<nav id="main-nav">
@@ -16,7 +16,7 @@
 				<form action="#" method="GET">
 					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
 				</form>
-				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
 $('#symbolSearchPane').show();</script>
 			</div>
 			<ul class="tree-view">
@@ -26,17 +26,17 @@ $('#symbolSearchPane').show();</script>
 			<ul class="tree-view">
 				<li>
 					<div class="module ">
-						<a href="../../jsonrpc/exception.html">exception</a>
-					</div>
-				</li>
-				<li>
-					<div class="module selected">
-						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
+						<a href="../jsonrpc/exception.html">exception</a>
 					</div>
 				</li>
 				<li>
 					<div class="module ">
-						<a href="../../jsonrpc/transport.html">transport</a>
+						<a href="../jsonrpc/jsonrpc.html">jsonrpc</a>
+					</div>
+				</li>
+				<li>
+					<div class="module selected">
+						<a href="../jsonrpc/transport.html">transport</a>
 					</div>
 				</li>
 			</ul>
@@ -44,18 +44,27 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCResponse.Error.message</h1><p>Retrieve the error message.
+			<h1>Module jsonrpc.transport</h1><p>Provide the network transport for JSON-RPC data.
 </p>
-			<div class="prototype">
-				<code class="lang-d">
-					<div class="single-prototype">
-			<span class="typ">string</span> <span class="pln">message
-			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
-					</div>
-				</code>
-			</div>
-			
-			
+			<section></section>
+			<section>
+				<h2>Structs</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="TCPTransport" class="public" href="../jsonrpc/transport/TCPTransport.html">TCPTransport</a>
+							</code>
+						</td>
+						<td>Manage TCP transport details for RPCClient objects.
+</td>
+					</tr>
+				</table>
+			</section>
 			<footer>
 				<table class="license-info">
 					<tr>

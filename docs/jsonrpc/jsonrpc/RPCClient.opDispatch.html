@@ -34,6 +34,11 @@ $('#symbolSearchPane').show();</script>
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
+				<li>
+					<div class="module ">
+						<a href="../../jsonrpc/transport.html">transport</a>
+					</div>
+				</li>
 			</ul>
 				</li>
 			</ul>
@@ -80,7 +85,7 @@ $('#symbolSearchPane').show();</script>
             }
 </p>
 
-<p>            auto rpc = new RPCClient!MyAPI("127.0.0.1", 54321);
+<p>            auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
             rpc.func1();
             int retval = rpc.func2(false, "hello");
 </p>
