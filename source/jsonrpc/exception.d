@@ -68,3 +68,8 @@ class InvalidDataReceivedException : Exception {
 class FailedToSendDataException : Exception {
     this() { super(""); }
 }
+
+/** Raised when there's a network connection error. */
+class ConnectionException : Exception {
+    this() { super(""); }
+}

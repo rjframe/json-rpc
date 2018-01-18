@@ -106,12 +106,15 @@ struct TCPTransport(API) {
             API api, string host, ushort port, int maxQueuedConnections = 10) {
         import std.parallelism : task;
 
-        _socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-        _socket.bind(getAddress(host, port)[0]);
+        with (_socket) {
+            setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+            bind(getAddress(host, port)[0]);
+            listen(maxQueuedConnections);
+            if (! isAlive) {
+                raise!(ConnectionException)("Listening socket not active.");
+            }
+        }
 
-        _socket.listen(maxQueuedConnections);
-        // TODO: Make this an exception.
-        assert(_socket.isAlive, "Listening socket not active.");
         while (true) {
             auto conn = _socket.accept;
             task!handler(TCPTransport(conn), api).executeInNewThread;

@@ -723,7 +723,6 @@ private static string GenCaller(API, string method)() pure {
 
     // TODO: Validate against API - if a named param is passed that isn't on the
     // method we need to return an error response. See execRPCMethod.
-    // TODO: The assertion probably needs to be an exception.
     string func =
             "\nauto ref callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
         ~ "    JSONValue vals = args;\n"
@@ -775,7 +774,7 @@ private static string GenCaller(API, string method)() pure {
 }
 
 /** Unwrap a scalar value from a JSONValue object. */
-private auto unwrapValue(T)(JSONValue value) pure {
+private auto unwrapValue(T)(JSONValue value) {
     import std.traits;
     static if (isFloatingPoint!T) {
         return cast(T)value.floating;
@@ -795,11 +794,12 @@ private auto unwrapValue(T)(JSONValue value) pure {
     } else static if (isBoolean!T) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
-        // TODO: Make this an exception.
-        assert(0, "Expected boolean, but type is " ~ value.type);
+        raise!(InvalidArgumentException, value)("Expected a boolean value.");
+    } else {
+        raise!(InvalidArgumentException, value)
+                ("Non-scalar value cannot be unwrapped.");
     }
-    // TODO: make this an exception.
-    assert(0, "Non-scalar value cannot be unwrapped.");
+    assert(0);
 }
 
 @test("unwrapValue retrieves scalar values from a JSONValue")
