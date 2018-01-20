@@ -13,8 +13,7 @@ interface MyAPI {
 }
 
 // These are the callable functions.
-// Inheritance isn't necessary; it just lets the compiler verify the API since
-// we're in the same module.
+// Inheritance isn't necessary.
 class APIImpl : MyAPI {
     bool x(int y) { return (y > 5); }
     void a(bool b, int c, string d) { return; }
@@ -31,6 +30,7 @@ void main() {
     import core.thread : Thread;
     import core.time : dur;
     import std.parallelism : task;
+
     task!startServer("127.0.0.1", 54321).executeInNewThread;
     Thread.sleep(dur!"seconds"(3)); // Give it time to start up before connecting.
 
@@ -43,7 +43,9 @@ void main() {
     assert(client.i() == 100);
 
     // `call` returns the RPCResponse from the server.
+    import std.stdio : writeln;
     auto resp2 = client.call(x, 3);
+    writeln(resp2.result);
 }
 ```
 
@@ -56,9 +58,7 @@ host them properly it once the project is ready.
 
 ## Non-conforming details
 
-* (tmp) All IDs must be integral; JSON-RPC allows NULL and string IDs as well.
 * (tmp) IDs are required in requests; Notifications are not yet supported.
-* (tmp) Only TCP sockets are supported as a transport protocol.
 * (tmp) Batches are not supported.
 
 ## Redesign plan
