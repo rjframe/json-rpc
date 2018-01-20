@@ -53,21 +53,15 @@ else private struct test { string name; }
     RPCRequest object; the RPCClient will do this for you.
 */
 struct RPCRequest {
+    import std.traits;
     import std.typecons : Flag, Yes, No;
 
-    private JSONValue _data;
+    private:
+
+    JSONValue _data;
+    JSON_TYPE _idType;
 
     package:
-
-    @test("Test RPCRequest constructors.")
-    unittest {
-        auto req1 = new RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
-        auto req2 = new RPCRequest(2, "some_method", `["abc", "def"]`);
-        auto req3 = new RPCRequest(2, "some_method", JSONValue(123));
-        auto json = JSONValue([1, 2, 3]);
-        auto req4 = new RPCRequest(3, "some_method", json);
-        auto req5 = new RPCRequest(4, "some_method");
-    }
 
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
@@ -84,32 +78,23 @@ struct RPCRequest {
 
             std.json.JSONException if the json string cannot be parsed.
     */
-    this(long id, string method, string params) in {
+    this(T)(T id, string method, string params) in {
         assert(method.length > 0);
     } body {
         this(id, method, params.parseJSON);
     }
 
-    /** Construct an RPCRequest with the specified remote method name and
-        arguments.
+    @test("Test RPCRequest constructors.")
+    unittest {
+        auto req1 = RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
+        auto req2 = RPCRequest(2, "some_method", `["abc", "def"]`);
+        auto req3 = RPCRequest(2, "some_method", JSONValue(123));
+        auto json = JSONValue([1, 2, 3]);
+        auto req4 = RPCRequest(3, "some_method", json);
+        auto req5 = RPCRequest(4, "some_method");
 
-        Params:
-            id =        The ID number of this request.
-            method =    The name of the remote method to call.
-            params =    A JSON string containing the method arguments as a JSON
-                        Object or array.
-
-        Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
-            array.
-    */
-    this(long id, string method, JSONValue params = JSONValue()) in {
-        assert(method.length > 0);
-    } body {
-        this._data["jsonrpc"] = "2.0";
-        this._data["id"] = id;
-        this._data["method"] = method;
-        this.params = params;
+        auto req6 = RPCRequest("id", "some_method", json);
+        auto req7 = RPCRequest(null, "some_method", json);
     }
 
     /** Convert the RPCRequest to a JSON string to pass to the server.
@@ -124,11 +109,63 @@ struct RPCRequest {
 
     public:
 
+    /** Construct an RPCRequest with the specified remote method name and
+        arguments.
+
+        The ID must be a string, a number, or null; null is not recommended for
+        use as an ID.
+
+        Params:
+            id =        The ID of the request.
+            method =    The name of the remote method to call.
+            params =    A JSON string containing the method arguments as a JSON
+                        Object or array.
+
+        Throws:
+            InvalidArgumentException if the json string is not a JSON Object or
+            array.
+    */
+    this(T)(T id, string method, JSONValue params = JSONValue())
+            if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
+    in {
+        assert(method.length > 0);
+    } body {
+        this._data["jsonrpc"] = "2.0";
+        this._data["id"] = id;
+        this._data["method"] = method;
+        this.params = params;
+
+        if (isIntegral!T) this._idType = JSON_TYPE.INTEGER;
+        else if (isFloatingPoint!T) this._idType = JSON_TYPE.FLOAT;
+        else if (isSomeString!T) this._idType = JSON_TYPE.STRING;
+        else if (is(T : typeof(null))) this._idType = JSON_TYPE.NULL;
+    }
+
     /** Get the JSON-RPC protocol version. */
     @property string protocolVersion() { return _data["jsonrpc"].str; }
 
-    /** Get the ID of this request. */
-    @property long id() { return _data["id"].integer; }
+    /** Get the ID of this request.
+
+        Throws:
+            TypeError if the underlying type of the ID is not the requested type.
+    */
+    @property auto id(T = long)() {
+        scope(failure) {
+            raise!(TypeException)("The ID is not of the specified type.");
+        }
+        return unwrapValue!T(_data["id"]);
+    }
+
+    @test("RPCRequest string id can be created and read.")
+    unittest {
+        import std.exception : assertThrown;
+
+        auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
+        assert(req.id!string == "my_id");
+        assertThrown!TypeException(req.id!int);
+    }
+
+    @property JSON_TYPE idType() { return _idType; }
 
     /** Retrieve the method to execute on the RPC server. */
     @property string method() { return _data["method"].str; }
@@ -263,15 +300,22 @@ struct RPCResponse {
                         request.
             result =    The return value(s) of the method executed.
     */
-    this(long id, JSONValue result) {
+    this(T)(T id, JSONValue result) {
         _data["jsonrpc"] = "2.0";
         _data["id"] = id;
         _data["result"] = result;
     }
 
-    this(long id) {
+    this(T)(T id) {
         _data["jsonrpc"] = "2.0";
         _data["id"] = id;
+    }
+
+    @test("RPCResponse constructors.")
+    unittest {
+        auto resp = RPCResponse("my_id", JSONValue("res"));
+        auto resp2 = RPCResponse("id2");
+        auto resp3 = RPCResponse(null, JSONValue([1, 2, 3]));
     }
 
     /** Attach an Error to an RPCResponse.
@@ -300,13 +344,32 @@ struct RPCResponse {
             id =    The ID of this response. This matches the relevant request.
             error = The error information to send.
     */
-    this(long id, ErrorCode error) {
+    this(T)(T id, ErrorCode error) {
         _data["jsonrpc"] = "2.0";
         _data["id"] = id;
         _error = Error(error);
     }
 
-    @property long id() { return _data["id"].integer; }
+    @property T id(T = long)() {
+        scope(failure) {
+            raise!(TypeException)("The ID is not of the specified type.");
+        }
+        static if (is(T : typeof(null))) {
+            return null;
+        } else return unwrapValue!T(_data["id"]);
+    }
+
+    @test("RPCResponse non-integral id can be created and read.")
+    unittest {
+        import std.exception : assertThrown;
+
+        auto resp = RPCResponse("my_id", JSONValue(["result"]));
+        assert(resp.id!string == "my_id");
+        assertThrown!TypeException(resp.id!int);
+
+        auto resp2 = RPCResponse(null, JSONValue(["result"]));
+        assert(resp.id!(typeof(null)) == null);
+    }
 
     public:
 
@@ -663,10 +726,20 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
             "   isFunction!(api." ~ method ~ ") &&\n" ~
             "   __traits(getProtection, api." ~ method ~ ") == `public`;\n"
         );
+
         static if (isMethodAPublicFunction) {
             if (method == request.method) {
                 auto retval = execRPCMethod!(API, method)(request, api);
-                return RPCResponse(request.id, JSONValue(retval));
+                if (request.idType == JSON_TYPE.INTEGER) {
+                    return RPCResponse(request.id, JSONValue(retval));
+                } else if (request.idType == JSON_TYPE.FLOAT) {
+                    return RPCResponse(request.id!double, JSONValue(retval));
+                } else if (request.idType == JSON_TYPE.STRING) {
+                    return RPCResponse(request.id!string, JSONValue(retval));
+                } else if (request.idType == JSON_TYPE.NULL) {
+                    return RPCResponse(null, JSONValue(retval));
+                }
+                assert(0, "Invalid request type.");
             }
         }
     }
@@ -931,7 +1004,17 @@ unittest {
     assert(r1.result.unwrapValue!string == "testing");
 }
 
-private:
+@test("executeMethod handles non-integral IDs")
+unittest {
+    auto sock = new FakeSocket;
+    auto api = new MyAPI();
+
+    auto r1 = executeMethod(RPCRequest("my_id", "retString"), api);
+    //assert(r1.id!string == "my_id");
+
+    //auto r2 = executeMethod(RPCRequest(null, "retString"), api);
+    //assert(r2.id!(typeof(null)) == null);
+}
 
 @test("[DOCTEST] RPCClient example: opDispatch")
 unittest {

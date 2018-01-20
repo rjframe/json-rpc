@@ -73,3 +73,7 @@ class FailedToSendDataException : Exception {
 class ConnectionException : Exception {
     this() { super(""); }
 }
+
+class TypeException : Exception {
+    this() { super(""); }
+}
