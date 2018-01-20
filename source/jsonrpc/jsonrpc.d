@@ -34,6 +34,15 @@
         assert(client.add(5, 6) == 11);
     }
     --------------------------------------------
+
+    Authors:
+        Ryan Frame
+
+    Copyright:
+        Copyright 2018 Ryan Frame
+
+    License:
+        MIT
  */
 module jsonrpc.jsonrpc;
 
@@ -56,12 +65,179 @@ struct RPCRequest {
     import std.traits;
     import std.typecons : Flag, Yes, No;
 
-    private:
+    /** Construct an RPCRequest with the specified remote method name and
+        arguments.
 
-    JSONValue _data;
-    JSON_TYPE _idType;
+        The ID must be a string, a number, or null; null is not recommended for
+        use as an ID.
+
+        Params:
+            id =        The ID of the request.
+            method =    The name of the remote method to call.
+            params =    A JSON string containing the method arguments as a JSON
+                        Object or array.
+
+        Throws:
+            InvalidArgumentException if the json string is not a JSON Object or
+            array.
+    */
+    this(T)(T id, string method, JSONValue params = JSONValue())
+            if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
+    in {
+        assert(method.length > 0);
+    } body {
+        this._data["jsonrpc"] = "2.0";
+        this._data["id"] = id;
+        this._data["method"] = method;
+        this.params = params;
+    }
+
+    /** Get the JSON-RPC protocol version. */
+    @property string protocolVersion() { return _data["jsonrpc"].str; }
+
+    /** Get the ID of this request.
+
+        If the id is not of type long, it needs to be specified; if uncertain of
+        the underlying type, use idType to query for it.
+
+        See_Also:
+            idType
+
+        Throws:
+            TypeError if the underlying type of the ID is not the requested type.
+    */
+    @property auto id(T = long)() {
+        scope(failure) {
+            raise!(TypeException)("The ID is not of the specified type.");
+        }
+        return unwrapValue!T(_data["id"]);
+    }
+
+    @test("RPCRequest string id can be created and read.")
+    unittest {
+        import std.exception : assertThrown;
+
+        auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
+        assert(req.id!string == "my_id");
+        assertThrown!TypeException(req.id!int);
+    }
+
+    @property JSON_TYPE idType() { return _data["id"].type; }
+
+    /** Retrieve the method to execute on the RPC server. */
+    @property string method() { return _data["method"].str; }
+
+    /** Specify the method to execute on the RPC server. */
+    @property void method(string val) { _data["method"] = val; }
+
+    /** Retrieve the parameters that will be passed to the method. */
+    @property JSONValue params() { return _data["params"]; }
+
+    /** Set the parameters to the remote method that will be called.
+
+        Params:
+            val =   A JSON Object or array. Other value types will be wrapped
+                    in an array (e.g., 3 becomes [3]).
+    */
+    @property void params(JSONValue val)
+    {
+        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
+                && val.type != JSON_TYPE.NULL) {
+            _data["params"] = JSONValue([val]);
+        } else _data["params"] = val;
+    }
+
+    /** Set the parameters to the remote method as a JSON string.
+
+        The string must be a JSON Object or array.
+
+        Params:
+            json =   A JSON string.
+
+        Throws:
+            InvalidArgumentException if the json string is not a JSON Object or
+            array.
+
+            std.json.JSONException if the json string cannot be parsed.
+    */
+    @property void params(string json) in {
+        assert(json.length > 0);
+    } body {
+        params(json.parseJSON);
+    }
 
     package:
+
+    /** Parse a JSON string into an RPCRequest object.
+
+        Params:
+            str =   The JSON string to parse.
+
+        Throws:
+            InvalidDataReceivedException if the ID or method fields are missing.
+
+            JSONException if the ID or method fields are an incorrect type. The
+            ID must be integral (non-conformant to the JSON-RPC spec) and the
+            method must be a string.
+    */
+    static RPCRequest fromJSONString(const char[] str) {
+        auto json = str.parseJSON;
+        if (json.type != JSON_TYPE.NULL
+                && "id" in json && "method" in json
+                && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
+            if ("params" !in json) json["params"] = JSONValue();
+
+            return RPCRequest(
+                    json["id"].integer,
+                    json["method"].str,
+                    json["params"]);
+        } else {
+            raise!(InvalidDataReceivedException, str)
+                ("Response is missing 'jsonrpc', 'id', and/or 'method' fields.");
+            assert(0);
+        }
+    }
+
+    @test("[DOCTEST]: RPCRequest.fromJSONString")
+    ///
+    unittest {
+        auto req = RPCRequest.fromJSONString(
+                `{"jsonrpc":"2.0","id":14,"method":"func","params":[0,1]}`);
+
+        assert(req.id == 14);
+        assert(req.method == "func");
+        assert(req.params.array == [JSONValue(0), JSONValue(1)]);
+    }
+
+    @test("fromJSONString converts JSON to RPCRequest")
+    unittest {
+        auto req = RPCRequest.fromJSONString(
+                `{"jsonrpc": "2.0", "id": 0, "method": "func", "params": [0, 1]}`);
+        assert(req.id == 0, "Incorrect ID.");
+        assert(req.method == "func", "Incorrect method.");
+        assert(req.params.array == [JSONValue(0), JSONValue(1)],
+                "Incorrect params.");
+    }
+
+    @test("fromJSONString throws exception on invalid input")
+    unittest {
+        import std.exception : assertThrown;
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`));
+
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"id": 0, "method": "func", "params": [0, 1]}`));
+
+        assertThrown!InvalidDataReceivedException(
+                RPCRequest.fromJSONString(
+                    `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`));
+
+        assertThrown!JSONException(
+                RPCRequest.fromJSONString(
+                    `{"jsonrpc": "2.0", "id": "0", "method": "func", "params": [0, 1]}`));
+    }
 
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
@@ -107,249 +283,33 @@ struct RPCRequest {
         return _data.toJSON(prettyPrint);
     }
 
-    public:
+    private:
 
-    /** Construct an RPCRequest with the specified remote method name and
-        arguments.
+    JSONValue _data;
+}
 
-        The ID must be a string, a number, or null; null is not recommended for
-        use as an ID.
+/** The RPC server's response sent to clients.
 
-        Params:
-            id =        The ID of the request.
-            method =    The name of the remote method to call.
-            params =    A JSON string containing the method arguments as a JSON
-                        Object or array.
+    Example:
+    ---
+    auto response = rpc.call("func", [1, 2, 3]);
 
-        Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
-            array.
-    */
-    this(T)(T id, string method, JSONValue params = JSONValue())
-            if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
-    in {
-        assert(method.length > 0);
-    } body {
-        this._data["jsonrpc"] = "2.0";
-        this._data["id"] = id;
-        this._data["method"] = method;
-        this.params = params;
+    if (response.hasError()) writeln(response.error);
+    else writeln(response.result);
+    ---
+*/
+struct RPCResponse {
+    /** Get the id of the RPCResponse.
 
-        if (isIntegral!T) this._idType = JSON_TYPE.INTEGER;
-        else if (isFloatingPoint!T) this._idType = JSON_TYPE.FLOAT;
-        else if (isSomeString!T) this._idType = JSON_TYPE.STRING;
-        else if (is(T : typeof(null))) this._idType = JSON_TYPE.NULL;
-    }
-
-    /** Get the JSON-RPC protocol version. */
-    @property string protocolVersion() { return _data["jsonrpc"].str; }
-
-    /** Get the ID of this request.
+        If the id is not of type long, it needs to be specified; if uncertain of
+        the underlying type, use idType to query for it.
 
         Throws:
             TypeError if the underlying type of the ID is not the requested type.
+
+        See_Also:
+            idType
     */
-    @property auto id(T = long)() {
-        scope(failure) {
-            raise!(TypeException)("The ID is not of the specified type.");
-        }
-        return unwrapValue!T(_data["id"]);
-    }
-
-    @test("RPCRequest string id can be created and read.")
-    unittest {
-        import std.exception : assertThrown;
-
-        auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
-        assert(req.id!string == "my_id");
-        assertThrown!TypeException(req.id!int);
-    }
-
-    @property JSON_TYPE idType() { return _idType; }
-
-    /** Retrieve the method to execute on the RPC server. */
-    @property string method() { return _data["method"].str; }
-
-    /** Specify the method to execute on the RPC server. */
-    @property void method(string val) { _data["method"] = val; }
-
-    /** Retrieve the parameters that will be passed to the method. */
-    @property JSONValue params() { return _data["params"]; }
-
-    /** Set the parameters to the remote method that will be called.
-
-        Params:
-            val =   A JSON Object or array. Other value types will be wrapped
-                    in an array (e.g., 3 becomes [3]).
-    */
-    @property void params(JSONValue val)
-    {
-        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
-                && val.type != JSON_TYPE.NULL) {
-            _data["params"] = JSONValue([val]);
-        } else _data["params"] = val;
-    }
-
-    /** Set the parameters to the remote method as a JSON string.
-
-        The string must be a JSON Object or array.
-
-        Params:
-            json =   A JSON string.
-
-        Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
-            array.
-
-            std.json.JSONException if the json string cannot be parsed.
-    */
-    @property void params(string json) in {
-        assert(json.length > 0);
-    } body {
-        params(json.parseJSON);
-    }
-
-    /** Parse a JSON string into an RPCRequest object.
-
-        Params:
-            str =   The JSON string to parse.
-
-        Throws:
-            InvalidDataReceivedException if the ID or method fields are missing.
-
-            JSONException if the ID or method fields are an incorrect type. The
-            ID must be integral (non-conformant to the JSON-RPC spec) and the
-            method must be a string.
-    */
-    static package RPCRequest fromJSONString(const char[] str) {
-        auto json = str.parseJSON;
-        if (json.type != JSON_TYPE.NULL
-                && "id" in json && "method" in json
-                && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
-            if ("params" !in json) json["params"] = JSONValue();
-
-            return RPCRequest(
-                    json["id"].integer,
-                    json["method"].str,
-                    json["params"]);
-        } else {
-            raise!(InvalidDataReceivedException, str)
-                ("Response is missing 'jsonrpc', 'id', and/or 'method' fields.");
-            assert(0);
-        }
-    }
-
-    @test("fromJSONString converts JSON to RPCRequest")
-    unittest {
-        auto req = RPCRequest.fromJSONString(
-                `{"jsonrpc": "2.0", "id": 0, "method": "func", "params": [0, 1]}`);
-        assert(req.id == 0, "Incorrect ID.");
-        assert(req.method == "func", "Incorrect method.");
-        assert(req.params.array == [JSONValue(0), JSONValue(1)],
-                "Incorrect params.");
-    }
-
-    @test("fromJSONString throws exception on invalid input")
-    unittest {
-        import std.exception : assertThrown;
-        assertThrown!InvalidDataReceivedException(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`));
-
-        assertThrown!InvalidDataReceivedException(
-                RPCRequest.fromJSONString(
-                    `{"id": 0, "method": "func", "params": [0, 1]}`));
-
-        assertThrown!InvalidDataReceivedException(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`));
-
-        assertThrown!JSONException(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "id": "0", "method": "func", "params": [0, 1]}`));
-    }
-}
-
-/** The RPC server's response sent to clients. */
-struct RPCResponse {
-
-    /** Construct an RPC response by taking a JSONValue response.
-
-        Params:
-            data =  The JSONValue data that comprises the response. It must be a
-                    valid JSON-RPC 2.0 response.
-    */
-    private this(JSONValue data) in {
-        assert("jsonrpc" in data && "id" in data
-                && ("result" in data).xor("error" in data),
-                "Malformed response: missing required field(s).");
-    } do {
-        _data = data;
-    }
-
-    package:
-
-    // Note: Only one of result, _error will be present.
-    JSONValue _data;
-    Error _error; // TODO: This will be removed and placed in _data.
-
-    /** Construct a response to send to the client.
-
-        Params:
-            id =        The ID of this response. This matches the relevant
-                        request.
-            result =    The return value(s) of the method executed.
-    */
-    this(T)(T id, JSONValue result) {
-        _data["jsonrpc"] = "2.0";
-        _data["id"] = id;
-        _data["result"] = result;
-    }
-
-    this(T)(T id) {
-        _data["jsonrpc"] = "2.0";
-        _data["id"] = id;
-    }
-
-    @test("RPCResponse constructors.")
-    unittest {
-        auto resp = RPCResponse("my_id", JSONValue("res"));
-        auto resp2 = RPCResponse("id2");
-        auto resp3 = RPCResponse(null, JSONValue([1, 2, 3]));
-    }
-
-    /** Attach an Error to an RPCResponse.
-
-        Example:
-            auto resp = RPCResponse(0).withError(myError);
-    */
-    static ref RPCResponse withError(ref RPCResponse, Error error) {
-        assert(0);
-    }
-
-    /** Attach an Error to an RPCResponse.
-
-        Example:
-            auto resp = RPCResponse(0).withError(ErrorCode.InvalidRequest);
-    */
-    static ref RPCResponse withError(ref RPCResponse, ErrorCode error) {
-        assert(0);
-    }
-
-    /** Construct a predefined error response to send to the client.
-
-        An standard Error object matching the error code is constructed.
-
-        Params:
-            id =    The ID of this response. This matches the relevant request.
-            error = The error information to send.
-    */
-    this(T)(T id, ErrorCode error) {
-        _data["jsonrpc"] = "2.0";
-        _data["id"] = id;
-        _error = Error(error);
-    }
-
     @property T id(T = long)() {
         scope(failure) {
             raise!(TypeException)("The ID is not of the specified type.");
@@ -371,13 +331,17 @@ struct RPCResponse {
         assert(resp.id!(typeof(null)) == null);
     }
 
-    public:
+    @property JSON_TYPE idType() { return _data["id"].type; }
 
     /** The JSON-RPC protocol version. */
     @property string protocolVersion() { return _data["jsonrpc"].str; }
 
     // TODO: I want to implicitly unwrap scalar values.
     @property JSONValue result() { return _data["result"]; }
+
+    @property JSONValue error() { assert(0); }
+
+    @property bool hasError() { return !(_data["error"].isNull); }
 
     /** Standard error codes.
 
@@ -458,6 +422,116 @@ struct RPCResponse {
         }
     }
 
+    /** Convert the RPCResponse to a JSON string to send to the client. */
+    string toJSONString() {
+        import std.format : format;
+        string ret =
+`{
+    "jsonrpc": "%s",
+    "result": %s,
+    "id": %s`.format(protocolVersion, result, id);
+        ret ~= "\n}";
+
+        return ret;
+    }
+
+    package:
+
+    // Note: Only one of result, _error will be present.
+    JSONValue _data;
+    Error _error; // TODO: This will be removed and placed in _data.
+
+    /** Construct a response to send to the client.
+
+        The id must be the same as the RPCRequest to which the server is
+        responding, and can be numeric, string, or null.
+
+        Params:
+            id =        The ID of this response. This matches the relevant
+                        request.
+            result =    The return value(s) of the method executed.
+    */
+    this(T)(T id, JSONValue result) {
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
+        _data["result"] = result;
+    }
+
+    /** Construct a response to send to the client.
+
+        The id must be the same as the RPCRequest to which the server is
+        responding, and can be numeric, string, or null.
+
+        This RPCResponse object must contain either a result or error before
+        sending to the client; it is not ready immediately after construction.
+
+        Params:
+            id =        The ID of this response. This matches the relevant
+                        request.
+
+        Example:
+        ---
+        // Construct a response and append a standard error to it.
+        auto response = RPCResponse(5).withError(ErrorCode.InvalidRequest);
+        ---
+    */
+    this(T)(T id) {
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
+    }
+
+    @test("RPCResponse constructors.")
+    unittest {
+        auto resp = RPCResponse("my_id", JSONValue("res"));
+        auto resp2 = RPCResponse("id2");
+        auto resp3 = RPCResponse(null, JSONValue([1, 2, 3]));
+    }
+
+    /** Construct a predefined error response to send to the client.
+
+        An standard Error object matching the error code is constructed.
+
+        Params:
+            id =    The ID of this response. This matches the relevant request.
+            error = The code of the standard error to send.
+    */
+    this(T)(T id, ErrorCode error) {
+        _data["jsonrpc"] = "2.0";
+        _data["id"] = id;
+        _error = Error(error);
+    }
+
+    /** Attach an Error to an RPCResponse.
+
+        Params:
+            resp =  The RPCResponse to attach the error to.
+            error = The error object to attach to the response.
+
+        Example:
+        ---
+        auto resp = RPCResponse(0).withError(myError);
+        ---
+    */
+    static ref RPCResponse withError(ref RPCResponse resp, Error error) {
+        // We throw if a result is present; the spec allows one xor the other.
+        assert(0);
+    }
+
+    /** Attach a standard error to an RPCResponse.
+
+        Params:
+            resp =  The RPCResponse to attach the error to.
+            error = The error code of the standard error.
+
+        Example:
+        ---
+        auto resp = RPCResponse(0).withError(ErrorCode.InvalidRequest);
+        ---
+    */
+    static ref RPCResponse withError(ref RPCResponse resp, ErrorCode error) {
+        assert(0);
+    }
+
     /** Construct an RPCResponse from a JSON string.
 
         Params:
@@ -482,17 +556,20 @@ struct RPCResponse {
         }
     }
 
-    /** Convert the RPCResponse to a JSON string to send to the client. */
-    string toJSONString() {
-        import std.format : format;
-        string ret =
-`{
-    "jsonrpc": "%s",
-    "result": %s,
-    "id": %s`.format(protocolVersion, result, id);
-        ret ~= "\n}";
+    private:
 
-        return ret;
+    /** Construct an RPC response by taking a JSONValue response.
+
+        Params:
+            data =  The JSONValue data that comprises the response. It must be a
+                    valid JSON-RPC 2.0 response.
+    */
+    this(JSONValue data) in {
+        assert("jsonrpc" in data && "id" in data
+                && ("result" in data).xor("error" in data),
+                "Malformed response: missing required field(s).");
+    } do {
+        _data = data;
     }
 }
 
@@ -500,27 +577,27 @@ struct RPCResponse {
 
     This implementation only supports communication via TCP sockets.
 
-Params:
-    API =   An interface containing the function definitions to call on the
-            remote server.
+    Params:
+        API =       An interface containing the function definitions to call on
+                    the remote server.
+        Transport = The network transport to use; by default, we use a
+                    TCPTransport.
+
+    Example:
+    ---
+    // This is the list of functions on the RPC server.
+    interface MyRemoteFunctions {
+        long func(string param) { return 56789; }
+    }
+
+    // Connect over TCP to a server on localhost.
+    auto rpc = new RPCClient!MyRemoteFunctions("127.0.0.1", 54321);
+    long retval = rpc.func("some string");
+    assert(retval == 56789);
+    ---
 */
 class RPCClient(API, Transport = TCPTransport!API)
         if (is(API == interface) && is(Transport == struct)) {
-
-    private:
-
-    long _nextId;
-    Transport _transport;
-
-    /** Instantiate an RPCClient with the specified network transport.
-
-        This is designed to allow mock objects for testing.
-    */
-    this(Transport transport) {
-        _transport = transport;
-    }
-
-    public:
 
     /** Instantiate an RPCClient bound to the specified host via a TCP connection.
 
@@ -627,6 +704,19 @@ class RPCClient(API, Transport = TCPTransport!API)
         auto respObj = _transport.receiveJSONObject();
         return RPCResponse.fromJSONString(respObj);
     }
+
+    private:
+
+    long _nextId;
+    Transport _transport;
+
+    /** Instantiate an RPCClient with the specified network transport.
+
+        This is designed to allow mock objects for testing.
+    */
+    this(Transport transport) {
+        _transport = transport;
+    }
 }
 
 /** Implementation of a JSON-RPC server.
@@ -636,31 +726,21 @@ class RPCClient(API, Transport = TCPTransport!API)
     Params:
         API =   A class or struct containing the functions available for the
                 client to call.
+
+    Example:
+    ---
+    class MyFunctions {
+        long func(string param) { return 56789; }
+    }
+
+    // Bind to a local port and serve func on a platter.
+    auto serve = new RPCServer!MyFunctions("127.0.0.1", 54321);
+    serve.listen();
+    ---
 */
 class RPCServer(API, Transport = TCPTransport!API)
         if (is(API == class) && is(Transport == struct)) {
     import std.socket;
-
-    private:
-
-    API _api;
-    Transport _transport;
-    string _host;
-    ushort _port;
-
-    /** Construct an RPCServer!API object.
-
-        api =       The instantiated class or struct providing the RPC API.
-        transport = The network transport to use.
-    */
-    this(API api, Transport transport, string host, ushort port) {
-        _api = api;
-        _host = host;
-        _port = port;
-        _transport = transport;
-    }
-
-    public:
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
 
@@ -694,6 +774,28 @@ class RPCServer(API, Transport = TCPTransport!API)
     void listen(int maxQueuedConnections = 10) {
         _transport.listen!(handleClient!API)(
                 _api, _host, _port, maxQueuedConnections);
+    }
+
+    private:
+
+    API _api;
+    Transport _transport;
+    string _host;
+    ushort _port;
+
+    /** Construct an RPCServer!API object.
+
+        By default, serve over a TCP connection; alternate network transports can
+        be specified.
+
+        api =       The instantiated class or struct providing the RPC API.
+        transport = The network transport to use.
+    */
+    this(API api, Transport transport, string host, ushort port) {
+        _api = api;
+        _host = host;
+        _port = port;
+        _transport = transport;
     }
 }
 
@@ -730,6 +832,7 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
         static if (isMethodAPublicFunction) {
             if (method == request.method) {
                 auto retval = execRPCMethod!(API, method)(request, api);
+
                 if (request.idType == JSON_TYPE.INTEGER) {
                     return RPCResponse(request.id, JSONValue(retval));
                 } else if (request.idType == JSON_TYPE.FLOAT) {
@@ -746,11 +849,13 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
     assert(0, "executeMethod should never reach the end of the function.");
 }
 
+private:
+
 /** Execute an RPC method and return its result.
 
     For now, void methods return `true`.
 */
-private auto execRPCMethod(API, string method)(RPCRequest request, API api) {
+auto execRPCMethod(API, string method)(RPCRequest request, API api) {
     import std.traits : ReturnType;
     mixin(
         "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
@@ -782,7 +887,7 @@ private auto execRPCMethod(API, string method)(RPCRequest request, API api) {
     auto retval = callRPCFunc!(method, JSONValue)(api, request.params);
     ---
 */
-private static string GenCaller(API, string method)() pure {
+static string GenCaller(API, string method)() pure {
     import std.conv : text;
     import std.meta : AliasSeq;
     import std.traits : Parameters, ParameterIdentifierTuple, ReturnType;
@@ -847,7 +952,7 @@ private static string GenCaller(API, string method)() pure {
 }
 
 /** Unwrap a scalar value from a JSONValue object. */
-private auto unwrapValue(T)(JSONValue value) {
+auto unwrapValue(T)(JSONValue value) {
     import std.traits;
     static if (isFloatingPoint!T) {
         return cast(T)value.floating;
@@ -892,7 +997,7 @@ unittest {
     assert(e.unwrapValue!bool == true);
 }
 
-private bool xor(T)(T left, T right) {
+bool xor(T)(T left, T right) {
     return left != right;
 }
 

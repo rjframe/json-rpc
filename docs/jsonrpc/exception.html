@@ -48,7 +48,7 @@ $('#symbolSearchPane').show();</script>
 </p>
 			<section></section>
 			<section>
-				<h2>Functions</h2>
+				<h2>Classes</h2>
 				<table>
 					<col class="caption"/>
 					<tr>
@@ -57,20 +57,11 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<td>
 							<code>
-								<a id="raise" class="public" href="../jsonrpc/exception/raise.html">raise</a><span class="decoration">(msg, file, line)</span>
+								<a id="ConnectionException" class="public" href="../jsonrpc/exception/ConnectionException.html">ConnectionException</a>
 							</code>
 						</td>
-						<td>Generate and throw an exception.
+						<td>Raised when there's a network connection error.
 </td>
-					</tr>
-				</table>
-			</section>
-			<section>
-				<h2>Classes</h2>
-				<table>
-					<col class="caption"/>
-					<tr>
-						<th>Name</th><th>Description</th>
 					</tr>
 					<tr>
 						<td>
@@ -107,6 +98,16 @@ $('#symbolSearchPane').show();</script>
 						</td>
 						<td>Raised when attempting to assign parameters other than an array or
     JSON Object to a Request.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="TypeException" class="public" href="../jsonrpc/exception/TypeException.html">TypeException</a>
+							</code>
+						</td>
+						<td>Raised when attempting to access a JSONValue via a different type than the
+    underlying type.
 </td>
 					</tr>
 				</table>

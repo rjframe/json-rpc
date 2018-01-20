@@ -71,6 +71,30 @@ $('#symbolSearchPane').show();</script>
 			<span class="pln">this</span>
 			<span class="pun">(</span>
 			<br/>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>api =   The instantiated class or struct providing the RPC API.
+        host =  The host interface on which to listen.
+        port =  The port on which to listen.
+</p>
+</section>
+
+			<h2 id="1">Function RPCServer.this</h2><p>Construct an RPCServer!API object to communicate via TCP sockets.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
 			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
 			<br/>
 			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
@@ -89,7 +113,7 @@ $('#symbolSearchPane').show();</script>
 </p>
 </section>
 
-			<h2 id="1">Function RPCServer.this</h2><p>Construct an RPCServer!API object.
+			<h2 id="2">Function RPCServer.this</h2><p>Construct an RPCServer!API object.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
@@ -109,32 +133,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>api =       The instantiated class or struct providing the RPC API.
-        transport = The network transport to use.
+			<section><p>By default, serve over a TCP connection; alternate network transports can
+        be specified.
 </p>
-</section>
 
-			<h2 id="2">Function RPCServer.this</h2><p>Construct an RPCServer!API object to communicate via TCP sockets.
-</p>
-			<div class="prototype">
-				<code class="lang-d">
-					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-					</div>
-				</code>
-			</div>
-			<section><p>api =   The instantiated class or struct providing the RPC API.
-        host =  The host interface on which to listen.
-        port =  The port on which to listen.
+<p>        api =       The instantiated class or struct providing the RPC API.
+        transport = The network transport to use.
 </p>
 </section>
 
@@ -144,19 +148,25 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<th>Authors</th>
 						<td>
-							
+							<p>Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							
+							<p>Copyright 2018 Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							
+							<p>MIT
+</p>
+
 						</td>
 					</tr>
 				</table>

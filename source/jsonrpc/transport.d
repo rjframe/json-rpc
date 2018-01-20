@@ -1,4 +1,29 @@
-/** Provide the network transport for JSON-RPC data. */
+/** Network transport layers for JSON-RPC data.
+
+    You attach a transport to your RPCClient and RPCServers, but you do not need
+    to use its API directly.
+
+    Example:
+    ---
+    interface IMyFuncs { void f(); }
+    class MyFuncs : IMyFuncs { void f() { return; }
+
+    // TCPTransport is the default - you don't have to do this explicitly...
+    auto server = new RPCServer!(MyFuncs, TCPTransport!MyFuncs)
+            ("127.0.0.1", 54321);
+    auto client = new RPCClient!(IMyFuncs, TCPTransport!IMyFuncs)
+            ("127.0.0.1", 54321);
+    ---
+
+    Authors:
+        Ryan Frame
+
+    Copyright:
+        Copyright 2018 Ryan Frame
+
+    License:
+        MIT
+*/
 module jsonrpc.transport;
 
 import std.socket;
@@ -9,20 +34,13 @@ else private struct test { string name; }
 
 private enum SocketBufSize = 4096;
 
-/** Manage TCP transport details for RPCClient objects. */
+/** Manage TCP transport details for RPCClient objects.
+
+    Params:
+        API = The class or interface providing the RPC API.
+*/
 struct TCPTransport(API) {
-    private:
-
-    Socket _socket;
-
-    /** This constructor is for unit testing. */
-    package this(Socket socket) {
-        _socket = socket;
-        _socket.blocking = true;
-    }
-
-    public:
-
+    package:
     /** Instantiate a TCPTransport object.
 
         Params:
@@ -35,7 +53,11 @@ struct TCPTransport(API) {
         this(new TcpSocket(getAddress(host, port)[0]));
     }
 
-    /** Send the provided data and return the number of bytes sent. */
+    /** Send the provided data and return the number of bytes sent.
+
+        If the return value is not equal to the length of the input in bytes,
+        there was a transmission error.
+    */
     size_t send(const char[] data) {
         ptrdiff_t bytesSent = 0;
         while (bytesSent < data.length) {
@@ -119,6 +141,16 @@ struct TCPTransport(API) {
             auto conn = _socket.accept;
             task!handler(TCPTransport(conn), api).executeInNewThread;
         }
+    }
+
+    private:
+
+    Socket _socket;
+
+    /** This constructor is for unit testing. */
+    package this(Socket socket) {
+        _socket = socket;
+        _socket.blocking = true;
     }
 }
 

@@ -54,12 +54,20 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			
+			<section></section>
+
 			<section><h2>Properties</h2>
 				<table>
 					<col class="caption"/>
 					<tr>
 						<th>Name</th><th>Type</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCResponse.id.html" class="public property"><code>id</code></a><span class="tableEntryAnnotation">[get]</span>
+						</td>
+						<td class="typecol"><code class="prettyprint lang-d"><span class="pln">T</span></code></td><td>Get the id of the RPCResponse.
+</td>
 					</tr>
 					<tr>
 						<td>
@@ -121,25 +129,37 @@ $('#symbolSearchPane').show();</script>
 					</tr>
 				</table>
 			</section>
-			
+			<section><h2>Example</h2>
+<pre class="code"><code class="lang-d"><span class="kwd">auto </span><span class="pln">response </span><span class="pun">= </span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">call</span><span class="pun">(</span><span class="str">"func"</span><span class="pun">, [</span><span class="lit">1</span><span class="pun">, </span><span class="lit">2</span><span class="pun">, </span><span class="lit">3</span><span class="pun">]);
+
+</span><span class="kwd">if </span><span class="pun">(</span><span class="pln">response<wbr/></span><span class="pun">.</span><span class="pln">hasError</span><span class="pun">()) </span><span class="pln">writeln</span><span class="pun">(</span><span class="pln">response<wbr/></span><span class="pun">.</span><span class="pln">error</span><span class="pun">);
+</span><span class="kwd">else </span><span class="pln">writeln</span><span class="pun">(</span><span class="pln">response<wbr/></span><span class="pun">.</span><span class="pln">result</span><span class="pun">);</span></code></pre>
+</section>
+
 			<footer>
 				<table class="license-info">
 					<tr>
 						<th>Authors</th>
 						<td>
-							
+							<p>Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							
+							<p>Copyright 2018 Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							
+							<p>MIT
+</p>
+
 						</td>
 					</tr>
 				</table>

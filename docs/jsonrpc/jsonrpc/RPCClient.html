@@ -73,7 +73,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Instantiate an RPCClient with the specified network transport.
+						<td>Instantiate an RPCClient bound to the specified host via a TCP connection.
 </td>
 					</tr>
 					<tr>
@@ -82,7 +82,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Instantiate an RPCClient bound to the specified host via a TCP connection.
+						<td>Instantiate an RPCClient with the specified network transport.
 </td>
 					</tr>
 				</table>
@@ -115,9 +115,22 @@ $('#symbolSearchPane').show();</script>
 			</section>
 			<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="API">API</td><td>   An interface containing the function definitions to call on the
-            remote server.</td></tr>
+<tr><td id="API">API</td><td>       An interface containing the function definitions to call on
+                    the remote server.</td></tr>
+<tr><td id="Transport">Transport</td><td> The network transport to use; by default, we use a
+                    TCPTransport.</td></tr>
 </table>
+</section>
+<section><h2>Example</h2>
+<pre class="code"><code class="lang-d"><span class="com">// This is the list of functions on the RPC server.
+</span><span class="kwd">interface </span><span class="typ">MyRemoteFunctions </span><span class="pun">{
+    </span><span class="typ">long </span><span class="pln">func</span><span class="pun">(</span><span class="typ">string </span><span class="pln">param</span><span class="pun">) { </span><span class="kwd">return </span><span class="lit">56789</span><span class="pun">; }
+}
+
+</span><span class="com">// Connect over TCP to a server on localhost.
+</span><span class="kwd">auto </span><span class="pln">rpc </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCClient</span><span class="pun">!</span><span class="typ">MyRemoteFunctions</span><span class="pun">(</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
+</span><span class="typ">long </span><span class="pln">retval </span><span class="pun">= </span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">func</span><span class="pun">(</span><span class="str">"some string"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">retval </span><span class="pun">== </span><span class="lit">56789</span><span class="pun">);</span></code></pre>
 </section>
 
 			<footer>
@@ -125,19 +138,25 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<th>Authors</th>
 						<td>
-							
+							<p>Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							
+							<p>Copyright 2018 Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							
+							<p>MIT
+</p>
+
 						</td>
 					</tr>
 				</table>

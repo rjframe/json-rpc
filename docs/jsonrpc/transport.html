@@ -44,9 +44,23 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Module jsonrpc.transport</h1><p>Provide the network transport for JSON-RPC data.
+			<h1>Module jsonrpc.transport</h1><p>Network transport layers for JSON-RPC data.
+</p><section><p>You attach a transport to your RPCClient and RPCServers, but you do not need
+    to use its API directly.
 </p>
-			<section></section>
+</section>
+
+			<section><section><h2>Example</h2>
+<pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">IMyFuncs </span><span class="pun">{ </span><span class="typ">void </span><span class="pln">f</span><span class="pun">(); }
+</span><span class="kwd">class </span><span class="typ">MyFuncs </span><span class="pun">: </span><span class="typ">IMyFuncs </span><span class="pun">{ </span><span class="typ">void </span><span class="pln">f</span><span class="pun">() { </span><span class="kwd">return</span><span class="pun">; }
+
+</span><span class="com">// TCPTransport is the default - you don't have to do this explicitly...
+</span><span class="kwd">auto </span><span class="pln">server </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCServer</span><span class="pun">!(</span><span class="typ">MyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPTransport.html"></span><span class="typ">TCPTransport</span></a><span class="pun">!</span><span class="typ">MyFuncs</span><span class="pun">)
+        (</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
+</span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCClient</span><span class="pun">!(</span><span class="typ">IMyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPTransport.html"></span><span class="typ">TCPTransport</span></a><span class="pun">!</span><span class="typ">IMyFuncs</span><span class="pun">)
+        (</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);</span></code></pre>
+</section>
+</section>
 			<section>
 				<h2>Structs</h2>
 				<table>
@@ -70,19 +84,25 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<th>Authors</th>
 						<td>
-							
+							<p>Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							
+							<p>Copyright 2018 Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							
+							<p>MIT
+</p>
+
 						</td>
 					</tr>
 				</table>

@@ -1,6 +1,42 @@
 /** Exception base class inspired by Adam Ruppe's exception.d */
 module jsonrpc.exception;
 
+/** Raised when attempting to assign parameters other than an array or
+    JSON Object to a Request.
+*/
+class InvalidParameterException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when invalid data is passed as an argument to a function. */
+class InvalidArgumentException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when invalid data is received by the client or server. */
+class InvalidDataReceivedException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when data did not send properly. */
+class FailedToSendDataException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when there's a network connection error. */
+class ConnectionException : Exception {
+    this() { super(""); }
+}
+
+/** Raised when attempting to access a JSONValue via a different type than the
+    underlying type.
+*/
+class TypeException : Exception {
+    this() { super(""); }
+}
+
+package:
+
 /** Generate and throw an exception.
 
     Additional data can be provided, both for inspection by catching code and
@@ -45,35 +81,4 @@ unittest {
         }
     }
     func(false, true);
-}
-
-/** Raised when attempting to assign parameters other than an array or
-    JSON Object to a Request.
-*/
-class InvalidParameterException : Exception {
-    this() { super(""); }
-}
-
-/** Raised when invalid data is passed as an argument to a function. */
-class InvalidArgumentException : Exception {
-    this() { super(""); }
-}
-
-/** Raised when invalid data is received by the client or server. */
-class InvalidDataReceivedException : Exception {
-    this() { super(""); }
-}
-
-/** Raised when data did not send properly. */
-class FailedToSendDataException : Exception {
-    this() { super(""); }
-}
-
-/** Raised when there's a network connection error. */
-class ConnectionException : Exception {
-    this() { super(""); }
-}
-
-class TypeException : Exception {
-    this() { super(""); }
 }

@@ -2,11 +2,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>http://127.0.0.1/index.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/exception/ConnectionException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/FailedToSendDataException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidArgumentException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidDataReceivedException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidParameterException.html</loc></url>
-<url><loc>http://127.0.0.1/jsonrpc/exception/raise.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/exception/TypeException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/executeMethod.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/handleClient.html</loc></url>
@@ -23,6 +24,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.params.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.params.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.protocolVersion.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCRequest.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.data.html</loc></url>
@@ -30,6 +32,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.message.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.Error.this.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.ErrorCode.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.id.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.protocolVersion.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCResponse.toJSONString.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCServer.html</loc></url>

@@ -82,7 +82,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Construct an RPCServer!API object.
+						<td>Construct an RPCServer!API object to communicate via TCP sockets.
 </td>
 					</tr>
 					<tr>
@@ -91,7 +91,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Construct an RPCServer!API object to communicate via TCP sockets.
+						<td>Construct an RPCServer!API object.
 </td>
 					</tr>
 				</table>
@@ -119,25 +119,40 @@ $('#symbolSearchPane').show();</script>
                 client to call.</td></tr>
 </table>
 </section>
+<section><h2>Example</h2>
+<pre class="code"><code class="lang-d"><span class="kwd">class </span><span class="typ">MyFunctions </span><span class="pun">{
+    </span><span class="typ">long </span><span class="pln">func</span><span class="pun">(</span><span class="typ">string </span><span class="pln">param</span><span class="pun">) { </span><span class="kwd">return </span><span class="lit">56789</span><span class="pun">; }
+}
+
+</span><span class="com">// Bind to a local port and serve func on a platter.
+</span><span class="kwd">auto </span><span class="pln">serve </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCServer</span><span class="pun">!</span><span class="typ">MyFunctions</span><span class="pun">(</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
+</span><span class="pln">serve<wbr/></span><span class="pun">.</span><span class="pln">listen</span><span class="pun">();</span></code></pre>
+</section>
 
 			<footer>
 				<table class="license-info">
 					<tr>
 						<th>Authors</th>
 						<td>
-							
+							<p>Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							
+							<p>Copyright 2018 Ryan Frame
+</p>
+
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							
+							<p>MIT
+</p>
+
 						</td>
 					</tr>
 				</table>

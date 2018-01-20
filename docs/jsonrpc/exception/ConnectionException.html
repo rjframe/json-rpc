@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.opDispatch</title>
+		<title>Class ConnectionException</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -25,12 +25,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 			<ul class="tree-view">
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../../jsonrpc/exception.html">exception</a>
 					</div>
 				</li>
 				<li>
-					<div class="module selected">
+					<div class="module ">
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
@@ -44,82 +44,37 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.opDispatch</h1><p>Make a blocking remote call with natural syntax.
+			<h1>Class ConnectionException</h1><p>Raised when there's a network connection error.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="kwd">auto ref </span><span class="kwd">auto</span> <span class="pln">opDispatch</span>(<span class="typ">string</span> apiFunc, ARGS...)
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="pln">ARGS</span> <span class="pln">args</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="kwd">class</span> <span class="typ">ConnectionException</span>
+			<br>&nbsp;&nbsp;: <span class="pln">object<wbr/></span><span class="pun">.</span><span class="typ">Exception</span>
+			<span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>Any method (not part of the RPC client itself) that is present in
-        the remote API can be called as if it was a member of the RPC client,
-        and that function call will be forwarded to the remote server.
-</p>
-</section>
-
-			<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="args">args</td><td> The arguments of the remote function to call.</td></tr>
-</table>
-</section>
-<section><h2>Returns</h2>
-<p>The return value of the function call.
-</p>
-</section>
-<section><h2>Throws</h2>
-<p>InvalidArgumentException if the argument types do not match the
-            remote interface.
-</p>
-</section>
-<section><h2>Example</h2>
-<p>interface RemoteFuncs {
-                void func1();
-                int func2(bool b, string s);
-            }
-</p>
-
-<p>            auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
-            rpc.func1();
-            int retval = rpc.func2(false, "hello");
-</p>
-</section>
-<section><h2>Notes</h2>
-<p>If you want the full response from the server, use the <code class="lang-d"><a href="../../jsonrpc/jsonrpc/RPCClient.call.html"><span class="pln">call</span></a></code>
-            function instead.
-</p>
-</section>
-
+			
+			
 			<footer>
 				<table class="license-info">
 					<tr>
 						<th>Authors</th>
 						<td>
-							<p>Ryan Frame
-</p>
-
+							
 						</td>
 					</tr>
 					<tr>
 						<th>Copyright</th>
 						<td>
-							<p>Copyright 2018 Ryan Frame
-</p>
-
+							
 						</td>
 					</tr>
 					<tr>
 						<th>License</th>
 						<td>
-							<p>MIT
-</p>
-
+							
 						</td>
 					</tr>
 				</table>
