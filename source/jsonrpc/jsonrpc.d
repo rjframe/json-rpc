@@ -71,6 +71,9 @@ struct RPCRequest {
         The ID must be a string, a number, or null; null is not recommended for
         use as an ID.
 
+        Compile_Time_Parameters:
+            T = The type of the request ID.
+
         Params:
             id =        The ID of the request.
             method =    The name of the remote method to call.
@@ -242,6 +245,9 @@ struct RPCRequest {
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
 
+        Compile_Time_Parameters:
+            T = The type of the request ID.
+
         Params:
             id =        The ID number of this request.
             method =    The name of the remote method to call.
@@ -336,7 +342,6 @@ struct RPCResponse {
     /** The JSON-RPC protocol version. */
     @property string protocolVersion() { return _data["jsonrpc"].str; }
 
-    // TODO: I want to implicitly unwrap scalar values.
     @property JSONValue result() { return _data["result"]; }
 
     @property JSONValue error() { assert(0); }
@@ -446,6 +451,9 @@ struct RPCResponse {
         The id must be the same as the RPCRequest to which the server is
         responding, and can be numeric, string, or null.
 
+        Compile_Time_Parameters:
+            T = The type of the response ID.
+
         Params:
             id =        The ID of this response. This matches the relevant
                         request.
@@ -464,6 +472,9 @@ struct RPCResponse {
 
         This RPCResponse object must contain either a result or error before
         sending to the client; it is not ready immediately after construction.
+
+        Compile_Time_Parameters:
+            T = The type of the response ID.
 
         Params:
             id =        The ID of this response. This matches the relevant
@@ -490,6 +501,9 @@ struct RPCResponse {
     /** Construct a predefined error response to send to the client.
 
         An standard Error object matching the error code is constructed.
+
+        Compile_Time_Parameters:
+            T = The type of the response ID.
 
         Params:
             id =    The ID of this response. This matches the relevant request.
@@ -577,9 +591,9 @@ struct RPCResponse {
 
     This implementation only supports communication via TCP sockets.
 
-    Params:
+    Compile_Time_Parameters:
         API =       An interface containing the function definitions to call on
-                    the remote server.
+                    the remote server. <BR>
         Transport = The network transport to use; by default, we use a
                     TCPTransport.
 
@@ -617,6 +631,10 @@ class RPCClient(API, Transport = TCPTransport!API)
         the remote API can be called as if it was a member of the RPC client,
         and that function call will be forwarded to the remote server.
 
+        Compile_Time_Parameters:
+            apiFunc = The name of the fake method to dispatch. <BR>
+            ARGS... = A list of parameter types.
+
         Params:
             args = The arguments of the remote function to call.
 
@@ -628,14 +646,16 @@ class RPCClient(API, Transport = TCPTransport!API)
             remote interface.
 
         Example:
-            interface RemoteFuncs {
-                void func1();
-                int func2(bool b, string s);
-            }
+        ---
+        interface RemoteFuncs {
+            void func1();
+            int func2(bool b, string s);
+        }
 
-            auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
-            rpc.func1();
-            int retval = rpc.func2(false, "hello");
+        auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
+        rpc.func1();
+        int retval = rpc.func2(false, "hello");
+        ---
 
         Notes:
             If you want the full response from the server, use the `call`
@@ -723,9 +743,11 @@ class RPCClient(API, Transport = TCPTransport!API)
 
     This implementation only supports communication via TCP sockets.
 
-    Params:
-        API =   A class or struct containing the functions available for the
-                client to call.
+    Compile_Time_Parameters:
+        API =       A class or struct containing the functions available for the
+                    client to call. <BR>
+        Transport = The network transport to use for data transmission. By
+                    default, a TCPTransport.
 
     Example:
     ---
@@ -748,8 +770,9 @@ class RPCServer(API, Transport = TCPTransport!API)
         use an alternate constructor, create it first and pass it to the
         RPCServer via a `this` overload.
 
-        host =  The host interface on which to listen.
-        port =  The port on which to listen.
+        Params:
+            host =  The host interface on which to listen.
+            port =  The port on which to listen.
     */
     this(string host, ushort port) {
         this(new API(), Transport(new TcpSocket()), host, port);
@@ -757,9 +780,10 @@ class RPCServer(API, Transport = TCPTransport!API)
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
 
-        api =   The instantiated class or struct providing the RPC API.
-        host =  The host interface on which to listen.
-        port =  The port on which to listen.
+        Params:
+            api =   The instantiated class or struct providing the RPC API.
+            host =  The host interface on which to listen.
+            port =  The port on which to listen.
     */
     this(API api, string host, ushort port) {
         this(api, Transport(new TcpSocket()), host, port);
@@ -788,8 +812,9 @@ class RPCServer(API, Transport = TCPTransport!API)
         By default, serve over a TCP connection; alternate network transports can
         be specified.
 
-        api =       The instantiated class or struct providing the RPC API.
-        transport = The network transport to use.
+        Params:
+            api =       The instantiated class or struct providing the RPC API.
+            transport = The network transport to use.
     */
     this(API api, Transport transport, string host, ushort port) {
         _api = api;
@@ -803,6 +828,13 @@ class RPCServer(API, Transport = TCPTransport!API)
 
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
+
+    Compile_Time_Parameters:
+        API = The class containing the RPC functions.
+
+    Params:
+        transport = The network transport used for data transmission.
+        api       = An instantiated class containing the functions to execute.
 */
 void handleClient(API)(TCPTransport!API transport, API api) {
     // TODO: On error, close the socket.
@@ -816,9 +848,13 @@ void handleClient(API)(TCPTransport!API transport, API api) {
 
     Only public members of the API object are callable as a remote function.
 
+    Compile_Time_Parameters:
+        API = The class or struct containing the function to call.
+
     Params:
         request =   The request from the client.
-        api =       The class or struct containing the function to call.
+        api =       An instance of the class or struct containing the function
+                    to call.
 */
 RPCResponse executeMethod(API)(RPCRequest request, API api) {
     import std.traits : isFunction;

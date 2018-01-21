@@ -1,6 +1,24 @@
 /** Exception base class inspired by Adam Ruppe's exception.d */
 module jsonrpc.exception;
 
+// I cannot define an exception within the unittest scope for testing/examples.
+///
+unittest {
+    /* Where InvalidArgummentException is defined as:
+    class InvalidArgumentException : Exception {
+        this() { super(""); }
+    }
+    */
+
+    void func(bool one, bool two) {
+        if (one == two) {
+            raise!(InvalidArgumentException, one, two)
+                    ("The values shouldn't match!");
+        }
+    }
+    func(false, true);
+}
+
 /** Raised when attempting to assign parameters other than an array or
     JSON Object to a Request.
 */
@@ -42,6 +60,10 @@ package:
     Additional data can be provided, both for inspection by catching code and
     for viewing/logging if unhandled.
 
+    Compile_Time_Parameters:
+        ExceptionClass = The exception class to throw.
+        T...           = A list of objects to include as part of the exception.
+
     Params:
         msg =   An optional message concerning the exception.
         file =  The file in which the exception was raised.
@@ -64,21 +86,4 @@ void raise(ExceptionClass, T...)(
         }
     }
     throw new Except(msg, file, line);
-}
-
-// I cannot define an exception within the unittest scope for testing/examples.
-///
-unittest {
-    /* Where InvalidArgummentException is defined as:
-    class InvalidArgumentException : Exception {
-        this() { super(""); }
-    }
-    */
-
-    void func(bool one, bool two) {
-        if (one == two) {
-            raise!(InvalidArgumentException, one, two)("The values shouldn't match!");
-        }
-    }
-    func(false, true);
 }

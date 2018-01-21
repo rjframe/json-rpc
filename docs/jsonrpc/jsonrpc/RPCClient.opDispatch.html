@@ -64,7 +64,12 @@ $('#symbolSearchPane').show();</script>
 </p>
 </section>
 
-			<section><h2>Parameters</h2>
+			<section><h2>Compile Time Parameters</h2>
+<p>apiFunc = The name of the fake method to dispatch. <BR>
+            ARGS... = A list of parameter types.
+</p>
+</section>
+<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
 <tr><td id="args">args</td><td> The arguments of the remote function to call.</td></tr>
 </table>
@@ -79,16 +84,14 @@ $('#symbolSearchPane').show();</script>
 </p>
 </section>
 <section><h2>Example</h2>
-<p>interface RemoteFuncs {
-                void func1();
-                int func2(bool b, string s);
-            }
-</p>
+<pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">RemoteFuncs </span><span class="pun">{
+    </span><span class="typ">void </span><span class="pln">func1</span><span class="pun">();
+    </span><span class="typ">int </span><span class="pln">func2</span><span class="pun">(</span><span class="typ">bool </span><span class="pln">b</span><span class="pun">, </span><span class="typ">string </span><span class="pln">s</span><span class="pun">);
+}
 
-<p>            auto rpc = new RPCClient!RemoteFuncs("127.0.0.1", 54321);
-            rpc.func1();
-            int retval = rpc.func2(false, "hello");
-</p>
+</span><span class="kwd">auto </span><span class="pln">rpc </span><span class="pun">= </span><span class="kwd">new <a href="../../jsonrpc/jsonrpc/RPCClient.html"></span><span class="typ">RPCClient</span></a><span class="pun">!</span><span class="typ">RemoteFuncs</span><span class="pun">(</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
+</span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">func1</span><span class="pun">();
+</span><span class="typ">int </span><span class="pln">retval </span><span class="pun">= </span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">func2</span><span class="pun">(</span><span class="kwd">false</span><span class="pun">, </span><span class="str">"hello"</span><span class="pun">);</span></code></pre>
 </section>
 <section><h2>Notes</h2>
 <p>If you want the full response from the server, use the <code class="lang-d"><a href="../../jsonrpc/jsonrpc/RPCClient.call.html"><span class="pln">call</span></a></code>

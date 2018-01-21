@@ -36,7 +36,7 @@ private enum SocketBufSize = 4096;
 
 /** Manage TCP transport details for RPCClient objects.
 
-    Params:
+    Compile_Time_Parameters:
         API = The class or interface providing the RPC API.
 */
 struct TCPTransport(API) {
@@ -115,6 +115,9 @@ struct TCPTransport(API) {
 
         `listen` will call the specified handler function in a new thread to
         handle each client it accepts.
+
+        Compile_Time_Parameters:
+            handler = The handler function to call when a client connects.
 
         Params:
             api =                  An instantiated class with the methods to
