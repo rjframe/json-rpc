@@ -889,7 +889,13 @@ private:
 
 /** Execute an RPC method and return its result.
 
-    For now, void methods return `true`.
+    Compile_Time_Parameters:
+        API    = The class providing the executable functions.
+        method = The name of the method to call.
+
+    Params:
+        request = The request sent from the client.
+        api     = The instantiated class with the method to execute.
 */
 auto execRPCMethod(API, string method)(RPCRequest request, API api) {
     import std.traits : ReturnType;
@@ -900,8 +906,7 @@ auto execRPCMethod(API, string method)(RPCRequest request, API api) {
 
     static if((returnType is typeid(void))) {
         callRPCFunc!(method, JSONValue)(api, request.params);
-        // TODO: What should I do here?
-        return true;
+        return null;
     } else {
         return callRPCFunc!(method, JSONValue)(api, request.params);
     }
@@ -966,13 +971,13 @@ static string GenCaller(API, string method)() pure {
 
         ~ "    assert(vals.array.length == " ~ paramTypes.length.text ~ ");\n";
 
-    static if (returnType !is typeid(void)) {
-        static if (returnType is typeid(bool)) {
-            func ~= ("    return cast(bool)");
-        } else {
-            func ~= ("    return ");
-        }
-    } else func ~= "    ";
+    static if (returnType is typeid(void)) {
+        func ~= "    ";
+    } else static if (returnType is typeid(bool)) {
+        func ~= ("    return cast(bool)");
+    } else {
+        func ~= ("    return ");
+    }
 
     func ~= "api." ~ method ~ "(";
 
@@ -1087,7 +1092,6 @@ unittest {
     auto r3 = execRPCMethod!(MyAPI, "voidFunc")
             (RPCRequest(2, "voidFunc"), api);
 
-    assert(r1 == true && r2 == true && r3 == true);
     assert(api.void3params_called == true
             && api.voidArray_called == true
             && api.voidFunc_called == true);
