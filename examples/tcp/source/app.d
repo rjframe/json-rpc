@@ -20,6 +20,7 @@ class ServeFunctions {
 
 void main(string[] args)
 {
+    import std.json;
     import core.thread : Thread;
     import core.time : dur;
 
@@ -37,7 +38,10 @@ void main(string[] args)
     auto client = new RPCClient!API(hostname, port);
 
     client.printHello();
+    client.notify("printGreeting", JSONValue("again!"));
+
     auto len = client.printGreeting("Some Person!");
     assert(len == "Some Person!".length);
+
     writeln("Press ^C to exit.");
 }

@@ -95,21 +95,51 @@ struct RPCRequest {
         this.params = params;
     }
 
+    /** Construct a notification with the specified remote method name and
+        arguments.
+
+        A notification will receive no response from the server.
+
+        Params:
+            method =    The name of the remote method to call.
+            params =    A JSON string containing the method arguments as a JSON
+                        Object or array.
+
+        Throws:
+            InvalidArgumentException if the json string is not a JSON Object or
+            array.
+    */
+    this(string method, JSONValue params = JSONValue()) in {
+        assert(method.length > 0);
+    } body {
+        this._isNotification = true;
+        this._data["jsonrpc"] = "2.0";
+        this._data["method"] = method;
+        this.params = params;
+    }
+
     /** Get the JSON-RPC protocol version. */
     @property string protocolVersion() { return _data["jsonrpc"].str; }
 
     /** Get the ID of this request.
 
-        If the id is not of type long, it needs to be specified; if uncertain of
+        If the ID is not of type long, it needs to be specified; if uncertain of
         the underlying type, use idType to query for it.
+
+        There is no ID for notifications.
 
         See_Also:
             idType
 
         Throws:
-            TypeError if the underlying type of the ID is not the requested type.
+            TypeException if the underlying type of the ID is not the requested
+            type.
+            TypeException if this request is a notification.
     */
     @property auto id(T = long)() {
+        if (this.isNotification) {
+            raise!(TypeException)("There is no ID in a notification.");
+        }
         scope(failure) {
             raise!(TypeException)("The ID is not of the specified type.");
         }
@@ -125,7 +155,24 @@ struct RPCRequest {
         assertThrown!TypeException(req.id!int);
     }
 
-    @property JSON_TYPE idType() { return _data["id"].type; }
+    /** Get the type of the underlying ID. There is no type for notifications.
+
+        See_Also:
+            id
+
+        Throws:
+            TypeException if this request is a notification.
+    */
+    @property JSON_TYPE idType() {
+        if (this.isNotification) {
+            raise!(TypeException)("There is no ID in a notification.");
+        }
+        return _data["id"].type;
+    }
+
+    /** Return true if this request is a notification; otherwise, return false.
+    */
+    @property bool isNotification() { return _isNotification; }
 
     /** Retrieve the method to execute on the RPC server. */
     @property string method() { return _data["method"].str; }
@@ -186,14 +233,18 @@ struct RPCRequest {
     static RPCRequest fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         if (json.type != JSON_TYPE.NULL
-                && "id" in json && "method" in json
+                && "method" in json
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
             if ("params" !in json) json["params"] = JSONValue();
 
-            return RPCRequest(
-                    json["id"].integer,
-                    json["method"].str,
-                    json["params"]);
+            if ("id" in json) {
+                return RPCRequest(
+                        json["id"].integer,
+                        json["method"].str,
+                        json["params"]);
+            } else {
+                return RPCRequest(json["method"].str, json["params"]);
+            }
         } else {
             raise!(InvalidDataReceivedException, str)
                 ("Response is missing 'jsonrpc', 'id', and/or 'method' fields.");
@@ -222,12 +273,19 @@ struct RPCRequest {
                 "Incorrect params.");
     }
 
+    @test("fromJSONString creates notifications")
+    unittest {
+        auto req = RPCRequest.fromJSONString(
+                `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`);
+
+        assert(req.method == "func", "Incorrect method.");
+        assert(req.params.array == [JSONValue(0), JSONValue(1)],
+                "Incorrect params.");
+    }
+
     @test("fromJSONString throws exception on invalid input")
     unittest {
         import std.exception : assertThrown;
-        assertThrown!InvalidDataReceivedException(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`));
 
         assertThrown!InvalidDataReceivedException(
                 RPCRequest.fromJSONString(
@@ -271,12 +329,15 @@ struct RPCRequest {
         auto req1 = RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
         auto req2 = RPCRequest(2, "some_method", `["abc", "def"]`);
         auto req3 = RPCRequest(2, "some_method", JSONValue(123));
+
         auto json = JSONValue([1, 2, 3]);
         auto req4 = RPCRequest(3, "some_method", json);
         auto req5 = RPCRequest(4, "some_method");
 
         auto req6 = RPCRequest("id", "some_method", json);
         auto req7 = RPCRequest(null, "some_method", json);
+
+        auto note = RPCRequest("some method", json);
     }
 
     /** Convert the RPCRequest to a JSON string to pass to the server.
@@ -292,6 +353,7 @@ struct RPCRequest {
     private:
 
     JSONValue _data;
+    bool _isNotification = false;
 }
 
 /** The RPC server's response sent to clients.
@@ -311,7 +373,8 @@ struct RPCResponse {
         the underlying type, use idType to query for it.
 
         Throws:
-            TypeError if the underlying type of the ID is not the requested type.
+            TypeException if the underlying type of the ID is not the requested
+            type.
 
         See_Also:
             idType
@@ -711,7 +774,7 @@ class RPCClient(API, Transport = TCPTransport!API)
             interface MyAPI { void func(int val); }
             auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-            import std.json : JSONValue;
+            import std.json : JSONValue, parseJSON;
             auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
             auto resp2 = client.call("func", JSONValue(3));
     */
@@ -723,6 +786,36 @@ class RPCClient(API, Transport = TCPTransport!API)
 
         auto respObj = _transport.receiveJSONObject();
         return RPCResponse.fromJSONString(respObj);
+    }
+
+    /** Send a notification to the server.
+
+        A notification is a function call with no reply requested. Note that
+        this is different than calling a function that returns void - in the
+        latter case a response is still received with a null result; if a
+        notification calls a function that returns a value, that return value is
+        not sent to the client.
+
+        Params:
+            func =   The name of the remote function to call.
+            params = A valid JSON array or Object containing the function
+                     parameters.
+
+        Throws:
+            std.json.JSONException if the string cannot be parsed as JSON.
+
+        Example:
+            interface MyAPI { void func(int val); }
+            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+
+            import std.json : JSONValue, parseJSON;
+            client.notify("func", `{ "val": 3 }`.parseJSON);
+            client.notify("func", JSONValue(3));
+    */
+    void notify(string func, JSONValue params = JSONValue()) in {
+        assert(func.length > 0);
+    } body {
+        _transport.send(RPCRequest(func, params).toJSONString());
     }
 
     private:
@@ -840,7 +933,11 @@ void handleClient(API)(TCPTransport!API transport, API api) {
     // TODO: On error, close the socket.
     while (true) {
         auto req = RPCRequest.fromJSONString(transport.receiveJSONObject());
-        transport.send(executeMethod(req, api).toJSONString);
+        if (req.isNotification) {
+            executeMethod(req, api);
+        } else {
+            transport.send(executeMethod(req, api).toJSONString);
+        }
     }
 }
 
@@ -869,7 +966,11 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
             if (method == request.method) {
                 auto retval = execRPCMethod!(API, method)(request, api);
 
-                if (request.idType == JSON_TYPE.INTEGER) {
+                if (request.isNotification) {
+                    // TODO: I'd rather return nothing; this is just thrown away.
+                    RPCResponse r;
+                    return r;
+                } else if (request.idType == JSON_TYPE.INTEGER) {
                     return RPCResponse(request.id, JSONValue(retval));
                 } else if (request.idType == JSON_TYPE.FLOAT) {
                     return RPCResponse(request.id!double, JSONValue(retval));
