@@ -44,8 +44,11 @@ void main() {
 
     // `call` returns the RPCResponse from the server.
     import std.stdio : writeln;
-    auto resp2 = client.call(x, 3);
+    auto resp2 = client.call("x", 3);
     writeln(resp2.result);
+
+    // `notify` executes a function, but doesn't get a response from the server.
+    client.notify("x", 3);
 }
 ```
 
@@ -58,8 +61,8 @@ host them properly it once the project is ready.
 
 ## Non-conforming details
 
-* (tmp) IDs are required in requests; Notifications are not yet supported.
 * (tmp) Batches are not supported.
+* (tmp) The server doesn't construct error responses yet.
 
 ## Redesign plan
 
@@ -69,7 +72,6 @@ host them properly it once the project is ready.
 * Need to support a function registry on the server, and runtime function lists
   on the client. The client especially shouldn't be required to know its API at
   compile-time.
-* The server doesn't construct error responses yet.
 
 ## Testing
 
