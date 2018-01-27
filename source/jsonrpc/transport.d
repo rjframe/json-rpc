@@ -68,29 +68,40 @@ struct TCPTransport(API) {
         return bytesSent;
     }
 
-    /** Receive a single JSON object from the socket stream. */
-    char[] receiveJSONObject() {
+    /** Receive a single JSON object or array from the socket stream. */
+    char[] receiveJSONObjectOrArray() {
+        // TODO: This assumes only ASCII characters.
         char[SocketBufSize] buf;
         char[] data;
         ptrdiff_t receivedBytes = 0;
 
         receivedBytes = _socket.receive(buf);
-        // TODO: Throw on no input data?
-        if (receivedBytes <= 0) { return data; }
+        if (receivedBytes <= 0) return data;
 
         data = buf[0..receivedBytes].dup;
-        if (data[0] != '{') raise!(InvalidDataReceivedException)
-            ("Expected to receive a '{' to begin a new JSON object.");
 
-        // Count the braces we receive. If we don't have a full object, receive
-        // until we do.
+        char startBrace;
+        char endBrace;
+        if (data[0] == '{') {
+            startBrace = '{';
+            endBrace = '}';
+        } else if (data[0] == '[') {
+            startBrace = '[';
+            endBrace = ']';
+        } else {
+            raise!(InvalidDataReceivedException)
+                    ("Expected to receive a JSON object or array.");
+        }
+
+        // Count the braces we receive. If we don't have a full object/array,
+        // receive until we do.
         int braceCount = 0;
         size_t totalLoc = 0;
         while(true) {
             size_t loc = 0;
             do {
-                if (data[totalLoc] == '{') ++braceCount;
-                else if (data[totalLoc] == '}') --braceCount;
+                if (data[totalLoc] == startBrace) ++braceCount;
+                else if (data[totalLoc] == endBrace) --braceCount;
                 ++loc;
                 ++totalLoc;
             } while (loc < receivedBytes);
@@ -155,6 +166,47 @@ struct TCPTransport(API) {
         _socket = socket;
         _socket.blocking = true;
     }
+}
+
+@test("Can receive a JSON object")
+unittest {
+    interface I {}
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!I(sock);
+    enum val = cast(char[])`{"id":23,"method":"func","params":[1,2,3]}`;
+
+    sock._receiveReturnValue = val;
+    auto ret = transport.receiveJSONObjectOrArray();
+    assert(ret == val);
+}
+
+@test("Can receive a JSON array")
+unittest {
+    interface I {}
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!I(sock);
+    enum val = cast(char[])`[{"id":23,"method":"func","params":[1,2,3]},
+            {"id":24,"method":"func","params":[1,2,3]},
+            {"id":25,"method":"func","params":[1,2,3]},
+            {"method":"func","params":[1,2,3]},
+            {"id":26,"method":"func","params":[1,2,3]}]`;
+
+    sock._receiveReturnValue = val;
+    auto ret = transport.receiveJSONObjectOrArray();
+    assert(ret == val);
+}
+
+@test("receiveJSONObjectOrArray if not given an array or object")
+unittest {
+    import std.exception : assertThrown;
+    interface I {}
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!I(sock);
+    enum val = cast(char[])`"id":23,"method":"func","params":[1,2,3]}`;
+
+    sock._receiveReturnValue = val;
+    assertThrown!InvalidDataReceivedException(
+            transport.receiveJSONObjectOrArray());
 }
 
 version(unittest) {

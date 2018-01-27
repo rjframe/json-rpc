@@ -782,9 +782,10 @@ class RPCClient(API, Transport = TCPTransport!API)
         assert(func.length > 0);
     } body {
         auto req = RPCRequest(_nextId++, func, params);
+
         _transport.send(req.toJSONString());
 
-        auto respObj = _transport.receiveJSONObject();
+        auto respObj = _transport.receiveJSONObjectOrArray();
         return RPCResponse.fromJSONString(respObj);
     }
 
@@ -816,6 +817,58 @@ class RPCClient(API, Transport = TCPTransport!API)
         assert(func.length > 0);
     } body {
         _transport.send(RPCRequest(func, params).toJSONString());
+    }
+
+    import std.typecons : Tuple;
+    /** Execute a batch of function calls.
+
+        Params:
+            methods = An array of Tuple of values
+                      (method-name, JSONValue(parameters))
+
+        Returns:
+
+            An array of RPCResponse objects, in the same order as the respective
+            request.
+
+        Notes:
+
+            This does not yet support notifications in batch requests.
+
+        Example:
+        ---
+        import std.typecons : tuple;
+        interface API {
+            void func1(int a);
+            long func2(string s);
+            long func3();
+        }
+        auto client = RPCClient!API("localhost", 54321);
+
+        auto responses = client.batch([
+                tuple("func1", JSONValue(50)),
+                tuple("func1", JSONValue(-1)),
+                tuple("func2", JSONValue("hello")),
+                tuple("func3", JSONValue()),
+                tuple("func1", JSONValue(123))
+        ]);
+        ---
+    */
+    RPCResponse[] batch(Tuple!(string, JSONValue)[] methods) {
+        JSONValue[] reqs;
+        foreach (method; methods) {
+            reqs ~= RPCRequest(_nextId++, method[0], method[1])._data;
+        }
+        auto r = JSONValue(reqs);
+        _transport.send(r.toJSON());
+
+        RPCResponse[] responses;
+        auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
+
+        foreach (resp; resps.array) {
+            responses ~= RPCResponse(resp);
+        }
+        return responses;
     }
 
     private:
@@ -932,11 +985,31 @@ class RPCServer(API, Transport = TCPTransport!API)
 void handleClient(API)(TCPTransport!API transport, API api) {
     // TODO: On error, close the socket.
     while (true) {
-        auto req = RPCRequest.fromJSONString(transport.receiveJSONObject());
-        if (req.isNotification) {
-            executeMethod(req, api);
+        auto received = transport.receiveJSONObjectOrArray();
+        if (received[0] == '[') {
+            auto batch = received.parseJSON();
+            JSONValue[] responses;
+            // TODO: Could parallelize these.
+            foreach (request; batch.array) {
+                // TODO: Horribly inefficient. Need a new constructor.
+                auto req = RPCRequest.fromJSONString(request.toJSON());
+                if (req.isNotification) {
+                    executeMethod(req, api);
+                } else {
+                    responses ~= executeMethod(req, api)._data;
+                }
+            }
+            if (responses.length > 0) {
+                auto data = JSONValue(responses);
+                transport.send(data.toJSON());
+            } // else: they were all notifications.
         } else {
-            transport.send(executeMethod(req, api).toJSONString);
+            auto req = RPCRequest.fromJSONString(received);
+            if (req.isNotification) {
+                executeMethod(req, api);
+            } else {
+                transport.send(executeMethod(req, api).toJSONString);
+            }
         }
     }
 }
@@ -1291,4 +1364,36 @@ unittest {
     auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":null}`;
     auto resp2 = client.call("func", JSONValue(3));
+}
+
+@test("[DOCTEST] Execute batches of requests.")
+unittest {
+    interface API {
+        void func1(int a);
+        long func2(string s);
+        long func3();
+    }
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport!API(sock);
+    auto client = new RPCClient!API(transport);
+
+    sock.receiveReturnValue =
+        `[{"id":0,"jsonrpc":"2.0","result":null},
+          {"id":1,"jsonrpc":"2.0","result":null},
+          {"id":2,"jsonrpc":"2.0","result":123},
+          {"id":3,"jsonrpc":"2.0","result":0},
+          {"id":4,"jsonrpc":"2.0","result":null}]`;
+
+    import std.typecons : tuple;
+    auto responses = client.batch([
+            tuple("func1", JSONValue(50)),
+            tuple("func1", JSONValue(-1)),
+            tuple("func2", JSONValue("hello")),
+            tuple("func3", JSONValue()),
+            tuple("func1", JSONValue(123))
+    ]);
+
+    assert(responses[0].result == JSONValue(null));
+    assert(responses[2].result == JSONValue(123));
+    assert(responses[3].result == JSONValue(0));
 }

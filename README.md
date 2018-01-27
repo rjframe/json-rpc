@@ -49,6 +49,14 @@ void main() {
 
     // `notify` executes a function, but doesn't get a response from the server.
     client.notify("x", 3);
+
+    // Send a batch.
+    import std.typecons : tuple;
+    import std.json : parseJSON;
+    auto responses = client.batch([
+            tuple("x", JSONValue(3)),
+            tuple("a", JSONValue(`{"b": false, "c": -50, "d": "fifty"}`.parseJSON))
+    ]);
 }
 ```
 
@@ -61,7 +69,7 @@ host them properly it once the project is ready.
 
 ## Non-conforming details
 
-* (tmp) Batches are not supported.
+* (tmp) Batches on the client do not support notifications.
 * (tmp) The server doesn't construct error responses yet.
 
 ## Redesign plan

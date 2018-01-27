@@ -1,0 +1,12 @@
+{
+	"name": "batch",
+	"authors": [
+		"Ryan Frame"
+	],
+    "dependencies": {
+        "jsonrpc": { "path": "../../" }
+    },
+	"description": "Test JSON-RPC client/server running a batch.",
+	"copyright": "Copyright © 2018 Ryan Frame",
+	"license": "MIT"
+}
