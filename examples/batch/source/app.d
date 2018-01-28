@@ -24,10 +24,8 @@ void main(string[] args)
 
     writeln("Starting server...");
     auto t = new Thread({
-            try {
         auto rpc = new RPCServer!ServeFunctions(hostname, port);
         rpc.listen;
-        } catch (Throwable ex) {writeln(ex.msg);}
     });
     t.isDaemon = true;
     t.start;
