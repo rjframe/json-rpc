@@ -128,6 +128,10 @@ struct RPCRequest {
 
         There is no ID for notifications.
 
+        Compile_Time_Parameters:
+            T = The type of the ID; the default type is `long`, but JSON-RPC
+                allows IDs to also be string or typeof(null).
+
         See_Also:
             idType
 
@@ -153,6 +157,12 @@ struct RPCRequest {
         auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
         assert(req.id!string == "my_id");
         assertThrown!TypeException(req.id!int);
+    }
+
+    @test("RPCRequest null id can be created and read.")
+    unittest {
+        auto req = RPCRequest(null, "func", JSONValue(["params"]));
+        assert(req.id!(typeof(null)) is null);
     }
 
     /** Get the type of the underlying ID. There is no type for notifications.
@@ -383,9 +393,7 @@ struct RPCResponse {
         scope(failure) {
             raise!(TypeException)("The ID is not of the specified type.");
         }
-        static if (is(T : typeof(null))) {
-            return null;
-        } else return unwrapValue!T(_data["id"]);
+        return unwrapValue!T(_data["id"]);
     }
 
     @test("RPCResponse non-integral id can be created and read.")
@@ -1188,6 +1196,8 @@ auto unwrapValue(T)(JSONValue value) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
         raise!(InvalidArgumentException, value)("Expected a boolean value.");
+    } else static if (is(T == typeof(null))) {
+        return null;
     } else {
         raise!(InvalidArgumentException, value)
                 ("Non-scalar value cannot be unwrapped.");
