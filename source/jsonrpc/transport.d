@@ -121,7 +121,6 @@ struct TCPTransport(API) {
     // servers; this would let me take the host and port in the constructor, etc.
     // and just be a cleaner division of tasks, even though most functionality
     // is the same.
-    // at compile-time;
     /** Listen for client requests.
 
         `listen` will call the specified handler function in a new thread to
@@ -140,8 +139,6 @@ struct TCPTransport(API) {
     */
     void listen(alias handler)(
             API api, string host, ushort port, int maxQueuedConnections = 10) {
-        import std.parallelism : task;
-
         with (_socket) {
             setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
             bind(getAddress(host, port)[0]);
@@ -152,6 +149,7 @@ struct TCPTransport(API) {
         }
 
         while (true) {
+            import std.parallelism : task;
             auto conn = _socket.accept;
             task!handler(TCPTransport(conn), api).executeInNewThread;
         }
