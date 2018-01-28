@@ -117,6 +117,12 @@ struct TCPTransport(API) {
         }
     }
 
+    /** Close the socket. */
+    void close() {
+        _socket.shutdown(SocketShutdown.BOTH);
+        _socket.close();
+    }
+
     // TODO: It makes sense to use separate transport objects for clients and
     // servers; this would let me take the host and port in the constructor, etc.
     // and just be a cleaner division of tasks, even though most functionality
