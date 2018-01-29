@@ -42,6 +42,7 @@ void main(string[] args)
 
     auto len = client.printGreeting("Some Person!");
     assert(len == "Some Person!".length);
+    client.close();
 
     writeln("Press ^C to exit.");
 }

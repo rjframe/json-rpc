@@ -696,11 +696,6 @@ class RPCClient(API, Transport = TCPTransport!API)
         this(Transport(host, port));
     }
 
-    /** Clean up the transport's resources when the client is destroyed. */
-    ~this() {
-        _transport.close();
-    }
-
     /** Make a blocking remote call with natural syntax.
 
         Any method (not part of the RPC client itself) that is present in
@@ -946,11 +941,6 @@ class RPCServer(API, Transport = TCPTransport!API)
     */
     this(API api, string host, ushort port) {
         this(api, Transport(new TcpSocket()), host, port);
-    }
-
-    /** Clean up the transport's resources when the server is destroyed. */
-    ~this() {
-        _transport.close();
     }
 
     /** Listen for and respond to connections.
