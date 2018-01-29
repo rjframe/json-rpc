@@ -23,10 +23,10 @@
 
         auto t = new Thread({
             auto rpc = new RPCServer!ServeFunctions(hostname, port);
-            rpc.listen;
+            rpc.listen();
         });
         t.isDaemon = true;
-        t.start;
+        t.start();
         Thread.sleep(dur!"seconds"(2));
 
         auto client = new RPCClient!API(hostname, port);
@@ -138,6 +138,7 @@ struct RPCRequest {
         Throws:
             TypeException if the underlying type of the ID is not the requested
             type.
+
             TypeException if this request is a notification.
     */
     @property auto id(T = long)() {
@@ -660,8 +661,6 @@ struct RPCResponse {
 
 /** Implementation of a JSON-RPC client.
 
-    This implementation only supports communication via TCP sockets.
-
     Compile_Time_Parameters:
         API =       An interface containing the function definitions to call on
                     the remote server. <BR>
@@ -681,10 +680,10 @@ struct RPCResponse {
     assert(retval == 56789);
     ---
 */
-class RPCClient(API, Transport = TCPTransport!API)
+class RPCClient(API, Transport = TCPTransport)
         if (is(API == interface) && is(Transport == struct)) {
 
-    /** Instantiate an RPCClient bound to the specified host via a TCP connection.
+    /** Instantiate an RPCClient bound to the specified host.
 
         Params:
             host =  The hostname or address of the RPC server.
@@ -776,15 +775,18 @@ class RPCClient(API, Transport = TCPTransport!API)
         Throws:
             std.json.JSONException if the string cannot be parsed as JSON.
 
-        Returns: The server's response.
+        Returns:
+            The server's response.
 
         Example:
-            interface MyAPI { void func(int val); }
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+        ---
+        interface MyAPI { void func(int val); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-            import std.json : JSONValue, parseJSON;
-            auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
-            auto resp2 = client.call("func", JSONValue(3));
+        import std.json : JSONValue, parseJSON;
+        auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
+        auto resp2 = client.call("func", JSONValue(3));
+        ---
     */
     RPCResponse call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
@@ -814,12 +816,14 @@ class RPCClient(API, Transport = TCPTransport!API)
             std.json.JSONException if the string cannot be parsed as JSON.
 
         Example:
-            interface MyAPI { void func(int val); }
-            auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
+        ---
+        interface MyAPI { void func(int val); }
+        auto client = new RPCClient!MyAPI("127.0.0.1", 54321);
 
-            import std.json : JSONValue, parseJSON;
-            client.notify("func", `{ "val": 3 }`.parseJSON);
-            client.notify("func", JSONValue(3));
+        import std.json : JSONValue, parseJSON;
+        client.notify("func", `{ "val": 3 }`.parseJSON);
+        client.notify("func", JSONValue(3));
+        ---
     */
     void notify(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
@@ -835,12 +839,10 @@ class RPCClient(API, Transport = TCPTransport!API)
                       (method-name, JSONValue(parameters))
 
         Returns:
-
             An array of RPCResponse objects, in the same order as the respective
             request.
 
         Notes:
-
             This does not yet support notifications in batch requests.
 
         Example:
@@ -898,10 +900,10 @@ class RPCClient(API, Transport = TCPTransport!API)
     This implementation only supports communication via TCP sockets.
 
     Compile_Time_Parameters:
-        API =       A class or struct containing the functions available for the
-                    client to call. <BR>
-        Transport = The network transport to use for data transmission. By
-                    default, a TCPTransport.
+        API =      A class or struct containing the functions available for the
+                   client to call. <BR>
+        Listener = The object to use to manage client connections. By default, a
+                   TCPTransport.
 
     Example:
     ---
@@ -914,22 +916,22 @@ class RPCClient(API, Transport = TCPTransport!API)
     serve.listen();
     ---
 */
-class RPCServer(API, Transport = TCPTransport!API)
-        if (is(API == class) && is(Transport == struct)) {
+class RPCServer(API, Listener = TCPListener!API)
+        if (is(API == class) && is(Listener == struct)) {
     import std.socket;
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
 
-        The API must be constructable via a default constructor; if you need to
-        use an alternate constructor, create it first and pass it to the
-        RPCServer via a `this` overload.
+        The API class must be constructable via a default constructor; if you
+        need to use an alternate constructor, create it first and pass it to the
+        RPCServer via another constructor.
 
         Params:
             host =  The host interface on which to listen.
             port =  The port on which to listen.
     */
     this(string host, ushort port) {
-        this(new API(), Transport(new TcpSocket()), host, port);
+        this(new API(), Listener(host, port));
     }
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
@@ -940,26 +942,24 @@ class RPCServer(API, Transport = TCPTransport!API)
             port =  The port on which to listen.
     */
     this(API api, string host, ushort port) {
-        this(api, Transport(new TcpSocket()), host, port);
+        this(api, Listener(host, port));
     }
 
     /** Listen for and respond to connections.
 
         Params:
-            maxQueuedConnections = The maximum number of connections to hold in
+            maxQueuedConnections = The maximum number of clients to hold in
                                    the backlog before rejecting connections.
     */
     void listen(int maxQueuedConnections = 10) {
-        _transport.listen!(handleClient!API)(
-                _api, _host, _port, maxQueuedConnections);
+        _listener.listen!(handleClient!API)(
+                _api, maxQueuedConnections);
     }
 
     private:
 
     API _api;
-    Transport _transport;
-    string _host;
-    ushort _port;
+    Listener _listener;
 
     /** Construct an RPCServer!API object.
 
@@ -970,11 +970,9 @@ class RPCServer(API, Transport = TCPTransport!API)
             api =       The instantiated class or struct providing the RPC API.
             transport = The network transport to use.
     */
-    this(API api, Transport transport, string host, ushort port) {
+    this(API api, Listener listener) {
         _api = api;
-        _host = host;
-        _port = port;
-        _transport = transport;
+        _listener = listener;
     }
 }
 
@@ -984,13 +982,16 @@ class RPCServer(API, Transport = TCPTransport!API)
     client requests. This is not intended to be called by user code.
 
     Compile_Time_Parameters:
-        API = The class containing the RPC functions.
+        API =       The class containing the RPC functions.
+        Transport = The type of the network transport to use; by default, this
+                    is a TCPTransport.
 
     Params:
         transport = The network transport used for data transmission.
         api       = An instantiated class containing the functions to execute.
 */
-void handleClient(API)(TCPTransport!API transport, API api) {
+void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
+        if (is(Transport == struct)) {
     // TODO: On error, close the socket.
     while (true) {
         auto received = transport.receiveJSONObjectOrArray();
@@ -1353,7 +1354,7 @@ unittest {
     }
 
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!RemoteFuncs(sock);
+    auto transport = TCPTransport(sock);
     auto rpc = new RPCClient!RemoteFuncs(transport);
 
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
@@ -1366,7 +1367,7 @@ unittest {
 unittest {
     interface MyAPI { void func(int val); }
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!MyAPI(sock);
+    auto transport = TCPTransport(sock);
     auto client = new RPCClient!MyAPI(transport);
 
     import std.json : JSONValue;
@@ -1384,7 +1385,7 @@ unittest {
         long func3();
     }
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!API(sock);
+    auto transport = TCPTransport(sock);
     auto client = new RPCClient!API(transport);
 
     sock.receiveReturnValue =

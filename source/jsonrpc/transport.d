@@ -1,18 +1,20 @@
-/** Network transport layers for JSON-RPC data.
+/** Network transport management implementation for JSON-RPC data.
 
-    You attach a transport to your RPCClient and RPCServers, but you do not need
-    to use its API directly.
+    You attach a transport to your RPCClient and a listener to your RPCServers,
+    but you do not need to use the APIs directly.
 
     Example:
     ---
     interface IMyFuncs { void f(); }
     class MyFuncs : IMyFuncs { void f() { return; }
 
-    // TCPTransport is the default - you don't have to do this explicitly...
-    auto server = new RPCServer!(MyFuncs, TCPTransport!MyFuncs)
+    // TCP sockets are the default - you don't have to name them explicitly...
+    auto server = new RPCServer!(MyFuncs, TCPListener!MyFuncs)
             ("127.0.0.1", 54321);
-    auto client = new RPCClient!(IMyFuncs, TCPTransport!IMyFuncs)
+    auto client = new RPCClient!(IMyFuncs, TCPTransport)
             ("127.0.0.1", 54321);
+
+    client.f();
     ---
 
     Authors:
@@ -34,13 +36,10 @@ else private struct test { string name; }
 
 private enum SocketBufSize = 4096;
 
-/** Manage TCP transport details for RPCClient objects.
-
-    Compile_Time_Parameters:
-        API = The class or interface providing the RPC API.
-*/
-struct TCPTransport(API) {
+/** Manage TCP transport connection details and tasks. */
+struct TCPTransport {
     package:
+
     /** Instantiate a TCPTransport object.
 
         Params:
@@ -57,7 +56,11 @@ struct TCPTransport(API) {
 
         If the return value is not equal to the length of the input in bytes,
         there was a transmission error.
+
+        Params:
+            data = The string data to send.
     */
+    // TODO: Take data as ubyte[]?
     size_t send(const char[] data) {
         ptrdiff_t bytesSent = 0;
         while (bytesSent < data.length) {
@@ -123,44 +126,6 @@ struct TCPTransport(API) {
         _socket.close();
     }
 
-    // TODO: It makes sense to use separate transport objects for clients and
-    // servers; this would let me take the host and port in the constructor, etc.
-    // and just be a cleaner division of tasks, even though most functionality
-    // is the same.
-    /** Listen for client requests.
-
-        `listen` will call the specified handler function in a new thread to
-        handle each client it accepts.
-
-        Compile_Time_Parameters:
-            handler = The handler function to call when a client connects.
-
-        Params:
-            api =                  An instantiated class with the methods to
-                                   execute.
-            host =                 The hostname of the server on which to listen.
-            port =                 The port on which to listen.
-            maxQueuedConnections = The maximum number of connections to backlog
-                                   before refusing connections.
-    */
-    void listen(alias handler)(
-            API api, string host, ushort port, int maxQueuedConnections = 10) {
-        with (_socket) {
-            setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
-            bind(getAddress(host, port)[0]);
-            listen(maxQueuedConnections);
-            if (! isAlive) {
-                raise!(ConnectionException)("Listening socket not active.");
-            }
-        }
-
-        while (true) {
-            import std.parallelism : task;
-            auto conn = _socket.accept;
-            task!handler(TCPTransport(conn), api).executeInNewThread;
-        }
-    }
-
     private:
 
     Socket _socket;
@@ -172,11 +137,67 @@ struct TCPTransport(API) {
     }
 }
 
+/** Listen for incoming connections and pass clients to a handler function.
+
+    Compile_Time_Parameters:
+        API = The class containing the methods for the server to execute.
+*/
+struct TCPListener(API) {
+    package:
+
+    /** Instantiate a TCPListener object.
+
+        Params:
+            host = The hostname to connect to.
+            port = The port number of the host to connect to.
+    */
+    this(string host, ushort port) in {
+        assert(host.length > 0);
+    } body {
+        _socket = new TcpSocket();
+        _socket.blocking = true;
+        _socket.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
+        _socket.bind(getAddress(host, port)[0]);
+    }
+
+    /** Listen for client requests.
+
+        `listen` will call the specified handler function in a new thread to
+        handle each client it accepts.
+
+        Compile_Time_Parameters:
+            handler = The handler function to call when a client connects.
+
+        Params:
+            api =                  An instantiated class with the methods to
+                                   execute.
+            maxQueuedConnections = The maximum number of connections to backlog
+                                   before refusing connections.
+    */
+    void listen(alias handler)(API api, int maxQueuedConnections = 10) {
+        _socket.listen(maxQueuedConnections);
+        if (! _socket.isAlive) {
+            raise!(ConnectionException)("Listening socket not active.");
+        }
+
+        while (true) {
+            import std.parallelism : task;
+            auto conn = _socket.accept();
+            task!handler(TCPTransport(conn), api).executeInNewThread();
+        }
+    }
+
+    private:
+
+    Socket _socket;
+}
+
+
 @test("Can receive a JSON object")
 unittest {
     interface I {}
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!I(sock);
+    auto transport = TCPTransport(sock);
     enum val = cast(char[])`{"id":23,"method":"func","params":[1,2,3]}`;
 
     sock._receiveReturnValue = val;
@@ -188,7 +209,7 @@ unittest {
 unittest {
     interface I {}
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!I(sock);
+    auto transport = TCPTransport(sock);
     enum val = cast(char[])`[{"id":23,"method":"func","params":[1,2,3]},
             {"id":24,"method":"func","params":[1,2,3]},
             {"id":25,"method":"func","params":[1,2,3]},
@@ -205,7 +226,7 @@ unittest {
     import std.exception : assertThrown;
     interface I {}
     auto sock = new FakeSocket();
-    auto transport = TCPTransport!I(sock);
+    auto transport = TCPTransport(sock);
     enum val = cast(char[])`"id":23,"method":"func","params":[1,2,3]}`;
 
     sock._receiveReturnValue = val;
