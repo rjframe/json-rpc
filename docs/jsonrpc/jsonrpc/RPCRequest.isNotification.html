@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>RPCClient.this - multiple declarations</title>
+		<title>Function RPCRequest.isNotification</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,62 +44,17 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>RPCClient.this - multiple declarations</h1>
-			<nav class="page-nav">
-				<ul>
-					<li>
-						<a href="#0">
-							Function <code>RPCClient.this</code>
-						</a>
-					</li>
-					<li>
-						<a href="#1">
-							Function <code>RPCClient.this</code>
-						</a>
-					</li>
-				</ul>
-			</nav><h2 id="0">Function RPCClient.this</h2><p>Instantiate an RPCClient bound to the specified host.
+			<h1>Function RPCRequest.isNotification</h1><p>Return true if this request is a notification; otherwise, return false.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="typ">bool</span> <span class="pln">isNotification
+			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section></section>
-
-			<section><h3>Parameters</h3>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="host">host</td><td>  The hostname or address of the RPC server.</td></tr>
-<tr><td id="port">port</td><td>  The port at which to connect to the server.</td></tr>
-</table>
-</section>
-<h2 id="1">Function RPCClient.this</h2><p>Instantiate an RPCClient with the specified network transport.
-</p>
-			<div class="prototype">
-				<code class="lang-d">
-					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">Transport</span> <span class="pln">transport</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-					</div>
-				</code>
-			</div>
-			<section><p>This is designed to allow mock objects for testing.
-</p>
-</section>
-
+			
 			
 			<footer>
 				<table class="license-info">

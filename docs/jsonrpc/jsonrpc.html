@@ -69,10 +69,10 @@ $('#symbolSearchPane').show();</script>
 
     </span><span class="kwd">auto </span><span class="pln">t </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">Thread</span><span class="pun">({
         </span><span class="kwd">auto </span><span class="pln">rpc </span><span class="pun">= </span><span class="kwd">new <a href="../jsonrpc/jsonrpc/RPCServer.html"></span><span class="typ">RPCServer</span></a><span class="pun">!</span><span class="typ">ServeFunctions</span><span class="pun">(</span><span class="pln">hostname</span><span class="pun">, </span><span class="pln">port</span><span class="pun">);
-        </span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">listen</span><span class="pun">;
+        </span><span class="pln">rpc<wbr/></span><span class="pun">.</span><span class="pln">listen</span><span class="pun">();
     });
     </span><span class="pln">t<wbr/></span><span class="pun">.</span><span class="pln">isDaemon </span><span class="pun">= </span><span class="kwd">true</span><span class="pun">;
-    </span><span class="pln">t<wbr/></span><span class="pun">.</span><span class="pln">start</span><span class="pun">;
+    </span><span class="pln">t<wbr/></span><span class="pun">.</span><span class="pln">start</span><span class="pun">();
     </span><span class="typ">Thread<wbr/></span><span class="pun">.</span><span class="pln">sleep</span><span class="pun">(</span><span class="pln">dur</span><span class="pun">!</span><span class="str">"seconds"</span><span class="pun">(</span><span class="lit">2</span><span class="pun">));
 
     </span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new <a href="../jsonrpc/jsonrpc/RPCClient.html"></span><span class="typ">RPCClient</span></a><span class="pun">!</span><span class="pln">API</span><span class="pun">(</span><span class="pln">hostname</span><span class="pun">, </span><span class="pln">port</span><span class="pun">);

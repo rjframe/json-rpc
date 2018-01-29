@@ -76,6 +76,16 @@ $('#symbolSearchPane').show();</script>
         arguments.
 </td>
 					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCRequest.this.html" class="public">
+								<code>this</code>
+							</a>
+						</td>
+						<td>Construct a notification with the specified remote method name and
+        arguments.
+</td>
+					</tr>
 				</table>
 			</section>
 			<section><h2>Properties</h2>
@@ -89,6 +99,20 @@ $('#symbolSearchPane').show();</script>
 							<a href="../../jsonrpc/jsonrpc/RPCRequest.id.html" class="public property"><code>id</code></a><span class="tableEntryAnnotation">[get]</span>
 						</td>
 						<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">auto</span></code></td><td>Get the ID of this request.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCRequest.idType.html" class="public property"><code>idType</code></a><span class="tableEntryAnnotation">[get]</span>
+						</td>
+						<td class="typecol"><code class="prettyprint lang-d"><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="pln">JSON_TYPE</span></code></td><td>Get the type of the underlying ID. There is no type for notifications.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCRequest.isNotification.html" class="public property"><code>isNotification</code></a><span class="tableEntryAnnotation">[get]</span>
+						</td>
+						<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Return true if this request is a notification; otherwise, return false.
 </td>
 					</tr>
 					<tr>

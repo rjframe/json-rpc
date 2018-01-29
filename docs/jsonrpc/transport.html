@@ -44,9 +44,9 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Module jsonrpc.transport</h1><p>Network transport layers for JSON-RPC data.
-</p><section><p>You attach a transport to your RPCClient and RPCServers, but you do not need
-    to use its API directly.
+			<h1>Module jsonrpc.transport</h1><p>Network transport management implementation for JSON-RPC data.
+</p><section><p>You attach a transport to your RPCClient and a listener to your RPCServers,
+    but you do not need to use the APIs directly.
 </p>
 </section>
 
@@ -54,11 +54,13 @@ $('#symbolSearchPane').show();</script>
 <pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">IMyFuncs </span><span class="pun">{ </span><span class="typ">void </span><span class="pln">f</span><span class="pun">(); }
 </span><span class="kwd">class </span><span class="typ">MyFuncs </span><span class="pun">: </span><span class="typ">IMyFuncs </span><span class="pun">{ </span><span class="typ">void </span><span class="pln">f</span><span class="pun">() { </span><span class="kwd">return</span><span class="pun">; }
 
-</span><span class="com">// TCPTransport is the default - you don't have to do this explicitly...
-</span><span class="kwd">auto </span><span class="pln">server </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCServer</span><span class="pun">!(</span><span class="typ">MyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPTransport.html"></span><span class="typ">TCPTransport</span></a><span class="pun">!</span><span class="typ">MyFuncs</span><span class="pun">)
+</span><span class="com">// TCP sockets are the default - you don't have to name them explicitly...
+</span><span class="kwd">auto </span><span class="pln">server </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCServer</span><span class="pun">!(</span><span class="typ">MyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPListener.html"></span><span class="typ">TCPListener</span></a><span class="pun">!</span><span class="typ">MyFuncs</span><span class="pun">)
         (</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
-</span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCClient</span><span class="pun">!(</span><span class="typ">IMyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPTransport.html"></span><span class="typ">TCPTransport</span></a><span class="pun">!</span><span class="typ">IMyFuncs</span><span class="pun">)
-        (</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);</span></code></pre>
+</span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new </span><span class="typ">RPCClient</span><span class="pun">!(</span><span class="typ">IMyFuncs</span><span class="pun">, <a href="../jsonrpc/transport/TCPTransport.html"></span><span class="typ">TCPTransport</span></a><span class="pun">)
+        (</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
+
+</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">f</span><span class="pun">();</span></code></pre>
 </section>
 </section>
 			<section>
@@ -71,10 +73,19 @@ $('#symbolSearchPane').show();</script>
 					<tr>
 						<td>
 							<code>
+								<a id="TCPListener" class="public" href="../jsonrpc/transport/TCPListener.html">TCPListener</a>
+							</code>
+						</td>
+						<td>Listen for incoming connections and pass clients to a handler function.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
 								<a id="TCPTransport" class="public" href="../jsonrpc/transport/TCPTransport.html">TCPTransport</a>
 							</code>
 						</td>
-						<td>Manage TCP transport details for RPCClient objects.
+						<td>Manage TCP transport connection details and tasks.
 </td>
 					</tr>
 				</table>

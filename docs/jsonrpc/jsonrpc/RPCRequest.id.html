@@ -54,17 +54,29 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>If the id is not of type long, it needs to be specified; if uncertain of
+			<section><p>If the ID is not of type long, it needs to be specified; if uncertain of
         the underlying type, use idType to query for it.
+</p>
+
+<p>        There is no ID for notifications.
 </p>
 </section>
 
-			<section><h2>See Also</h2>
+			<section><h2>Compile Time Parameters</h2>
+<p>T = The type of the ID; the default type is <code class="lang-d"><span class="typ">long</span></code>, but JSON-RPC
+                allows IDs to also be string or typeof(null).
+</p>
+</section>
+<section><h2>See Also</h2>
 <p>idType
 </p>
 </section>
 <section><h2>Throws</h2>
-<p>TypeError if the underlying type of the ID is not the requested type.
+<p>TypeException if the underlying type of the ID is not the requested
+            type.
+</p>
+
+<p>            TypeException if this request is a notification.
 </p>
 </section>
 

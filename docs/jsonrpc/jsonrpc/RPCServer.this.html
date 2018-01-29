@@ -106,9 +106,9 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>The API must be constructable via a default constructor; if you need to
-        use an alternate constructor, create it first and pass it to the
-        RPCServer via a <code class="lang-d"><span class="kwd">this</span></code> overload.
+			<section><p>The API class must be constructable via a default constructor; if you
+        need to use an alternate constructor, create it first and pass it to the
+        RPCServer via another constructor.
 </p>
 </section>
 
@@ -128,11 +128,7 @@ $('#symbolSearchPane').show();</script>
 			<br/>
 			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
 			<br/>
-			&nbsp;&nbsp;<span class="typ">Transport</span> <span class="pln">transport</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
+			&nbsp;&nbsp;<span class="typ">Listener</span> <span class="pln">listener</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>

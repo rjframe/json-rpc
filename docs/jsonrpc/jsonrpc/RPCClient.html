@@ -57,9 +57,7 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section><p>This implementation only supports communication via TCP sockets.
-</p>
-</section>
+			<section></section>
 
 			<section><h2>Constructors</h2>
 				<table>
@@ -73,7 +71,7 @@ $('#symbolSearchPane').show();</script>
 								<code>this</code>
 							</a>
 						</td>
-						<td>Instantiate an RPCClient bound to the specified host via a TCP connection.
+						<td>Instantiate an RPCClient bound to the specified host.
 </td>
 					</tr>
 					<tr>
@@ -95,11 +93,29 @@ $('#symbolSearchPane').show();</script>
 					</tr>
 					<tr>
 						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCClient.batch.html" class="public">
+								<code>batch</code>
+							</a>
+						</td>
+						<td>Execute a batch of function calls.
+</td>
+					</tr>
+					<tr>
+						<td>
 							<a href="../../jsonrpc/jsonrpc/RPCClient.call.html" class="public">
 								<code>call</code>
 							</a>
 						</td>
 						<td>Make a function call on the RPC server.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/jsonrpc/RPCClient.notify.html" class="public">
+								<code>notify</code>
+							</a>
+						</td>
+						<td>Send a notification to the server.
 </td>
 					</tr>
 					<tr>

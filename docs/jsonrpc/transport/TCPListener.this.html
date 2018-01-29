@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function TCPTransport.receiveJSONObject</title>
+		<title>Function TCPListener.this</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,18 +44,31 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function TCPTransport.receiveJSONObject</h1><p>Receive a single JSON object from the socket stream.
+			<h1>Function TCPListener.this</h1><p>Instantiate a TCPListener object.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">char</span><span class="pun">[]</span> <span class="pln">receiveJSONObject
-			<span class="pun">()</span><span class="pun">;</span>
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			
-			
+			<section></section>
+
+			<section><h2>Parameters</h2>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="host">host</td><td> The hostname to connect to.</td></tr>
+<tr><td id="port">port</td><td> The port number of the host to connect to.</td></tr>
+</table>
+</section>
+
 			<footer>
 				<table class="license-info">
 					<tr>

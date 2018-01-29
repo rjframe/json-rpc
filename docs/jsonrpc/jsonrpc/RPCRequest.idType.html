@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function TCPTransport.listen</title>
+		<title>Function RPCRequest.idType</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -30,12 +30,12 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</li>
 				<li>
-					<div class="module ">
+					<div class="module selected">
 						<a href="../../jsonrpc/jsonrpc.html">jsonrpc</a>
 					</div>
 				</li>
 				<li>
-					<div class="module selected">
+					<div class="module ">
 						<a href="../../jsonrpc/transport.html">transport</a>
 					</div>
 				</li>
@@ -44,44 +44,25 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function TCPTransport.listen</h1><p>Listen for client requests.
+			<h1>Function RPCRequest.idType</h1><p>Get the type of the underlying ID. There is no type for notifications.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="typ">void</span> <span class="pln">listen</span>(alias handler)
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">int</span> <span class="pln">maxQueuedConnections</span> <span class="pun">=</span> <span class="lit">10</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="pln">JSON_TYPE</span> <span class="pln">idType
+			<span class="pun">()</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p><code class="lang-d"><span class="pln">listen</span></code> will call the specified handler function in a new thread to
-        handle each client it accepts.
-</p>
-</section>
+			<section></section>
 
-			<section><h2>Compile Time Parameters</h2>
-<p>handler = The handler function to call when a client connects.
+			<section><h2>See Also</h2>
+<p>id
 </p>
 </section>
-<section><h2>Parameters</h2>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="api">api</td><td>                  An instantiated class with the methods to
-                                   execute.</td></tr>
-<tr><td id="host">host</td><td>                 The hostname of the server on which to listen.</td></tr>
-<tr><td id="port">port</td><td>                 The port on which to listen.</td></tr>
-<tr><td id="maxQueuedConnections">maxQueuedConnections</td><td> The maximum number of connections to backlog
-                                   before refusing connections.</td></tr>
-</table>
+<section><h2>Throws</h2>
+<p>TypeException if this request is a notification.
+</p>
 </section>
 
 			<footer>

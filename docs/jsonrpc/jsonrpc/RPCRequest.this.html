@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCRequest.this</title>
+		<title>RPCRequest.this - multiple declarations</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,7 +44,21 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCRequest.this</h1><p>Construct an RPCRequest with the specified remote method name and
+			<h1>RPCRequest.this - multiple declarations</h1>
+			<nav class="page-nav">
+				<ul>
+					<li>
+						<a href="#0">
+							Function <code>RPCRequest.this</code>
+						</a>
+					</li>
+					<li>
+						<a href="#1">
+							Function <code>RPCRequest.this</code>
+						</a>
+					</li>
+				</ul>
+			</nav><h2 id="0">Function RPCRequest.this</h2><p>Construct an RPCRequest with the specified remote method name and
         arguments.
 </p>
 			<div class="prototype">
@@ -70,11 +84,11 @@ $('#symbolSearchPane').show();</script>
 </p>
 </section>
 
-			<section><h2>Compile Time Parameters</h2>
+			<section><h3>Compile Time Parameters</h3>
 <p>T = The type of the request ID.
 </p>
 </section>
-<section><h2>Parameters</h2>
+<section><h3>Parameters</h3>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
 <tr><td id="id">id</td><td>        The ID of the request.</td></tr>
 <tr><td id="method">method</td><td>    The name of the remote method to call.</td></tr>
@@ -82,7 +96,40 @@ $('#symbolSearchPane').show();</script>
                         Object or array.</td></tr>
 </table>
 </section>
-<section><h2>Throws</h2>
+<section><h3>Throws</h3>
+<p>InvalidArgumentException if the json string is not a JSON Object or
+            array.
+</p>
+</section>
+<h2 id="1">Function RPCRequest.this</h2><p>Construct a notification with the specified remote method name and
+        arguments.
+</p>
+			<div class="prototype">
+				<code class="lang-d">
+					<div class="single-prototype">
+			<span class="pln">this</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">method</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">params</span> <span class="pun">=</span> <span class="typ">JSONValue</span><span class="pun">(</span><span class="typ">Store</span><span class="pun">(</span><span class="kwd">null</span><span class="pun">, , , , , ), </span><span class="kwd">cast</span><span class="pun">(</span><span class="pln">JSON_TYPE</span><span class="pun">)</span><span class="kwd">cast</span><span class="pun">(</span><span class="typ">byte</span><span class="pun">)</span><span class="lit">0</span><span class="pun">)</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
+					</div>
+				</code>
+			</div>
+			<section><p>A notification will receive no response from the server.
+</p>
+</section>
+
+			<section><h3>Parameters</h3>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="method">method</td><td>    The name of the remote method to call.</td></tr>
+<tr><td id="params">params</td><td>    A JSON string containing the method arguments as a JSON
+                        Object or array.</td></tr>
+</table>
+</section>
+<section><h3>Throws</h3>
 <p>InvalidArgumentException if the json string is not a JSON Object or
             array.
 </p>

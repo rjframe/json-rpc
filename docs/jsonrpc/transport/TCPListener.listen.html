@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function TCPTransport.send</title>
+		<title>Function TCPListener.listen</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,26 +44,40 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function TCPTransport.send</h1><p>Send the provided data and return the number of bytes sent.
+			<h1>Function TCPListener.listen</h1><p>Listen for client requests.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="pln">size_t</span> <span class="pln">send</span>
+			<span class="typ">void</span> <span class="pln">listen</span>(alias handler)
 			<span class="pun">(</span>
 			<br/>
-			&nbsp;&nbsp;<span class="kwd">const </span><span class="typ">char</span><span class="pun">[]</span> <span class="pln">data</span>
+			&nbsp;&nbsp;<span class="pln">API</span> <span class="pln">api</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">int</span> <span class="pln">maxQueuedConnections</span> <span class="pun">=</span> <span class="lit">10</span>
 			<br/>
 			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
-			<section><p>If the return value is not equal to the length of the input in bytes,
-        there was a transmission error.
+			<section><p><code class="lang-d"><span class="pln">listen</span></code> will call the specified handler function in a new thread to
+        handle each client it accepts.
 </p>
 </section>
 
-			
+			<section><h2>Compile Time Parameters</h2>
+<p>handler = The handler function to call when a client connects.
+</p>
+</section>
+<section><h2>Parameters</h2>
+<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
+<tr><td id="api">api</td><td>                  An instantiated class with the methods to
+                                   execute.</td></tr>
+<tr><td id="maxQueuedConnections">maxQueuedConnections</td><td> The maximum number of connections to backlog
+                                   before refusing connections.</td></tr>
+</table>
+</section>
+
 			<footer>
 				<table class="license-info">
 					<tr>

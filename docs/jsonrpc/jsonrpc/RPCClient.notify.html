@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.call</title>
+		<title>Function RPCClient.notify</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,12 +44,12 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.call</h1><p>Make a function call on the RPC server.
+			<h1>Function RPCClient.notify</h1><p>Send a notification to the server.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<a href="../../jsonrpc/jsonrpc/RPCResponse.html"><span class="typ">RPCResponse</span></a> <span class="pln">call</span>
+			<span class="typ">void</span> <span class="pln">notify</span>
 			<span class="pun">(</span>
 			<br/>
 			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">func</span><span class="pun">,</span>
@@ -60,7 +60,13 @@ $('#symbolSearchPane').show();</script>
 					</div>
 				</code>
 			</div>
-			<section></section>
+			<section><p>A notification is a function call with no reply requested. Note that
+        this is different than calling a function that returns void - in the
+        latter case a response is still received with a null result; if a
+        notification calls a function that returns a value, that return value is
+        not sent to the client.
+</p>
+</section>
 
 			<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
@@ -73,17 +79,13 @@ $('#symbolSearchPane').show();</script>
 <p>std.json.JSONException if the string cannot be parsed as JSON.
 </p>
 </section>
-<section><h2>Returns</h2>
-<p>The server's response.
-</p>
-</section>
 <section><h2>Example</h2>
-<pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">MyAPI </span><span class="pun">{ </span><span class="typ">void <a href="../../jsonrpc/jsonrpc/RPCClient.call.html#func"></span><span class="pln">func</span></a><span class="pun">(</span><span class="typ">int </span><span class="pln">val</span><span class="pun">); }
+<pre class="code"><code class="lang-d"><span class="kwd">interface </span><span class="typ">MyAPI </span><span class="pun">{ </span><span class="typ">void <a href="../../jsonrpc/jsonrpc/RPCClient.notify.html#func"></span><span class="pln">func</span></a><span class="pun">(</span><span class="typ">int </span><span class="pln">val</span><span class="pun">); }
 </span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= </span><span class="kwd">new <a href="../../jsonrpc/jsonrpc/RPCClient.html"></span><span class="typ">RPCClient</span></a><span class="pun">!</span><span class="typ">MyAPI</span><span class="pun">(</span><span class="str">"127.0.0.1"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
 
 </span><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json </span><span class="pun">: </span><span class="typ">JSONValue</span><span class="pun">, </span><span class="pln">parseJSON</span><span class="pun">;
-</span><span class="kwd">auto </span><span class="pln">resp </span><span class="pun">= </span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">call</span><span class="pun">(</span><span class="str">"func"</span><span class="pun">, </span><span class="str">`{ "val": 3 }`<wbr/></span><span class="pun">.</span><span class="pln">parseJSON</span><span class="pun">);
-</span><span class="kwd">auto </span><span class="pln">resp2 </span><span class="pun">= </span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">call</span><span class="pun">(</span><span class="str">"func"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">3</span><span class="pun">));</span></code></pre>
+</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">(</span><span class="str">"func"</span><span class="pun">, </span><span class="str">`{ "val": 3 }`<wbr/></span><span class="pun">.</span><span class="pln">parseJSON</span><span class="pun">);
+</span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">(</span><span class="str">"func"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">3</span><span class="pun">));</span></code></pre>
 </section>
 
 			<footer>

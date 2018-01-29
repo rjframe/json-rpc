@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>TCPTransport.this - multiple declarations</title>
+		<title>Struct TCPListener</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,60 +44,57 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>TCPTransport.this - multiple declarations</h1>
-			<nav class="page-nav">
-				<ul>
-					<li>
-						<a href="#0">
-							Function <code>TCPTransport.this</code>
-						</a>
-					</li>
-					<li>
-						<a href="#1">
-							Function <code>TCPTransport.this</code>
-						</a>
-					</li>
-				</ul>
-			</nav><h2 id="0">Function TCPTransport.this</h2><p>Instantiate a TCPTransport object.
+			<h1>Struct TCPListener</h1><p>Listen for incoming connections and pass clients to a handler function.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">host</span><span class="pun">,</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">ushort</span> <span class="pln">port</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
+			<span class="kwd">struct</span> <span class="typ">TCPListener</span>(API)
+			<span class="pun">;</span>
 					</div>
 				</code>
 			</div>
 			<section></section>
 
-			<section><h3>Parameters</h3>
-<table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="host">host</td><td> The hostname to connect to.</td></tr>
-<tr><td id="port">port</td><td> The port number of the host to connect to.</td></tr>
-</table>
-</section>
-<h2 id="1">Function TCPTransport.this</h2><p>This constructor is for unit testing.
+			<section><h2>Constructors</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPListener.this.html" class="public">
+								<code>this</code>
+							</a>
+						</td>
+						<td>Instantiate a TCPListener object.
+</td>
+					</tr>
+				</table>
+			</section>
+			<section><h2>Methods</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<a href="../../jsonrpc/transport/TCPListener.listen.html" class="public">
+								<code>listen</code>
+							</a>
+						</td>
+						<td>Listen for client requests.
+</td>
+					</tr>
+				</table>
+			</section>
+			<section><h2>Compile Time Parameters</h2>
+<p>API = The class containing the methods for the server to execute.
 </p>
-			<div class="prototype">
-				<code class="lang-d">
-					<div class="single-prototype">
-			<span class="pln">this</span>
-			<span class="pun">(</span>
-			<br/>
-			&nbsp;&nbsp;<span class="typ">Socket</span> <span class="pln">socket</span>
-			<br/>
-			<span class="pun">)</span><span class="pun">;</span>
-					</div>
-				</code>
-			</div>
-			
-			
+</section>
+
 			<footer>
 				<table class="license-info">
 					<tr>
