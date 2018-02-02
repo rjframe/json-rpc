@@ -1260,12 +1260,13 @@ version(unittest) {
         void voidWithString(string s) { voidWithString_called = true; }
 
         string retString() { return "testing"; }
+
+        string øbæårößΓαζ(string input) { return input ~ "âいはろшь ж๏เ"; }
     }
 }
 
 @test("execRPCMethod executes void RPC functions")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "void3params")
@@ -1284,7 +1285,6 @@ unittest {
 
 @test("execRPCMethod executes non-void RPC functions")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "retBool")
@@ -1298,7 +1298,6 @@ unittest {
 
 @test("executeMethod returns integral values")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = executeMethod(RPCRequest(0, "retUlong",
@@ -1313,7 +1312,6 @@ unittest {
 
 @test("executeMethod returns boolean values")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = executeMethod(RPCRequest(0, "retTrue"), api);
@@ -1327,7 +1325,6 @@ unittest {
 
 @test("executeMethod returns string values")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = executeMethod(RPCRequest(0, "retString"), api);
@@ -1336,14 +1333,22 @@ unittest {
 
 @test("executeMethod handles non-integral IDs")
 unittest {
-    auto sock = new FakeSocket;
     auto api = new MyAPI();
 
     auto r1 = executeMethod(RPCRequest("my_id", "retString"), api);
-    //assert(r1.id!string == "my_id");
+    assert(r1.id!string == "my_id");
 
-    //auto r2 = executeMethod(RPCRequest(null, "retString"), api);
-    //assert(r2.id!(typeof(null)) == null);
+    auto r2 = executeMethod(RPCRequest(null, "retString"), api);
+    assert(r2.id!(typeof(null)) == null);
+}
+
+@test("executeMethod can execute functions and pass data not in the ASCII character range")
+unittest {
+    auto api = new MyAPI();
+
+    auto ret = executeMethod(
+            RPCRequest("áðý", "øbæårößΓαζ", JSONValue("éçφωτz")), api);
+    assert(ret.result == JSONValue("éçφωτzâいはろшь ж๏เ"));
 }
 
 @test("[DOCTEST] RPCClient example: opDispatch")
