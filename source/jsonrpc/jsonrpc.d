@@ -906,7 +906,6 @@ class RPCClient(API, Transport = TCPTransport)
 
 import std.typecons : Flag, No;
 /** Create a BatchRequest to pass to an RPCClient's `batch` function.
-        string method, JSONValue params, Flag!"notify" notify = No.notify) {
 
     Params:
         method = The name of the remote method to call.

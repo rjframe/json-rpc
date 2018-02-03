@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
-		<title>Function RPCClient.batch</title>
+		<title>Function batchReq</title>
 		<link rel="stylesheet" type="text/css" href="../../styles/ddox.css"/>
 		<link rel="stylesheet" href="../../prettify/prettify.css" type="text/css"/>
 		<script type="text/javascript" src="../../scripts/jquery.js">/**/</script><script type="text/javascript" src="../../scripts/ddox.js">/**/</script>
@@ -44,13 +44,21 @@ $('#symbolSearchPane').show();</script>
 			</ul>
 		</nav>
 		<div id="main-contents">
-			<h1>Function RPCClient.batch</h1><p>Execute a batch of function calls.
+			<h1>Function batchReq</h1><p>Create a BatchRequest to pass to an RPCClient's <code class="lang-d"><span class="pln">batch</span></code> function.
 </p>
 			<div class="prototype">
 				<code class="lang-d">
 					<div class="single-prototype">
-			{null} <span class="pln">batch
-			<span class="pun">()</span><span class="pun">;</span>
+			<span class="kwd">auto </span><span class="pln">jsonrpc<wbr/></span><span class="pun">.</span><span class="pln">jsonrpc<wbr/></span><span class="pun">.</span><span class="typ">BatchRequest</span> <span class="pln">batchReq</span>
+			<span class="pun">(</span>
+			<br/>
+			&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">method</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">json<wbr/></span><span class="pun">.</span><span class="typ">JSONValue</span> <span class="pln">params</span><span class="pun">,</span>
+			<br/>
+			&nbsp;&nbsp;<span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">typecons<wbr/></span><span class="pun">.</span><span class="typ">Flag</span>!("notify") <span class="pln">notify</span> <span class="pun">=</span> <span class="kwd">cast</span><span class="pun">(</span><span class="typ">Flag</span><span class="pun">)</span><span class="kwd">false</span>
+			<br/>
+			<span class="pun">)</span><span class="pun">;</span>
 					</div>
 				</code>
 			</div>
@@ -58,18 +66,15 @@ $('#symbolSearchPane').show();</script>
 
 			<section><h2>Parameters</h2>
 <table><col class="caption"><tr><th>Name</th><th>Description</th></tr>
-<tr><td id="requests">requests</td><td> A list of BatchRequests, each constructed via the
-                       <code class="lang-d"><a href="../../jsonrpc/jsonrpc/batchReq.html"><span class="pln">batchReq</span></a></code> function.</td></tr>
+<tr><td id="method">method</td><td> The name of the remote method to call.</td></tr>
+<tr><td id="params">params</td><td> A JSONValue scalar or object/array containing the method
+                 parameters.</td></tr>
+<tr><td id="notify">notify</td><td> Yes.notify if the request is a notification; No.notify
+                 otherwise.</td></tr>
 </table>
 </section>
 <section><h2>Returns</h2>
-<p>An array of RPCResponse objects, in the same order as the respective
-            request.
-</p>
-</section>
-<section><h2>Notes</h2>
-<p>Notifications do not get responses; if three requests are made, and
-            one is a notification, only two responses will be returned.
+<p>A BatchRequest to be passed to an RPCClient's batch function.
 </p>
 </section>
 <section><h2>Example</h2>
@@ -83,11 +88,11 @@ $('#symbolSearchPane').show();</script>
 </span><span class="kwd">auto </span><span class="pln">client </span><span class="pun">= <a href="../../jsonrpc/jsonrpc/RPCClient.html"></span><span class="typ">RPCClient</span></a><span class="pun">!</span><span class="pln">API</span><span class="pun">(</span><span class="str">"localhost"</span><span class="pun">, </span><span class="lit">54321</span><span class="pun">);
 
 </span><span class="kwd">auto </span><span class="pln">responses </span><span class="pun">= </span><span class="pln">client<wbr/></span><span class="pun">.</span><span class="pln">batch</span><span class="pun">(
-        <a href="../../jsonrpc/jsonrpc/batchReq.html"></span><span class="pln">batchReq</span></a><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">50</span><span class="pun">)),
-        <a href="../../jsonrpc/jsonrpc/batchReq.html"></span><span class="pln">batchReq</span></a><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(-</span><span class="lit">1</span><span class="pun">), </span><span class="typ">Yes<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">),
-        <a href="../../jsonrpc/jsonrpc/batchReq.html"></span><span class="pln">batchReq</span></a><span class="pun">(</span><span class="str">"func2"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="str">"hello"</span><span class="pun">)),
-        <a href="../../jsonrpc/jsonrpc/batchReq.html"></span><span class="pln">batchReq</span></a><span class="pun">(</span><span class="str">"func3"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(), </span><span class="typ">Yes<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">),
-        <a href="../../jsonrpc/jsonrpc/batchReq.html"></span><span class="pln">batchReq</span></a><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">123</span><span class="pun">))
+        </span><span class="pln">batchReq</span><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">50</span><span class="pun">)),
+        </span><span class="pln">batchReq</span><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(-</span><span class="lit">1</span><span class="pun">), </span><span class="typ">Yes<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">),
+        </span><span class="pln">batchReq</span><span class="pun">(</span><span class="str">"func2"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="str">"hello"</span><span class="pun">)),
+        </span><span class="pln">batchReq</span><span class="pun">(</span><span class="str">"func3"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(), </span><span class="typ">Yes<wbr/></span><span class="pun">.</span><span class="pln">notify</span><span class="pun">),
+        </span><span class="pln">batchReq</span><span class="pun">(</span><span class="str">"func1"</span><span class="pun">, </span><span class="typ">JSONValue</span><span class="pun">(</span><span class="lit">123</span><span class="pun">))
 );</span></code></pre>
 </section>
 

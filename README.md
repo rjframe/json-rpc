@@ -8,8 +8,8 @@ simply.
 ```d
 interface MyAPI {
     bool one(int y);
-    void a(bool b, int c, string d);
-    int i();
+    void two(bool b, int c, string d);
+    int three();
 }
 
 // These are the callable functions.
@@ -50,13 +50,17 @@ void main() {
     client.notify("one", 3);
 
     // Send a batch.
-    import std.typecons : tuple;
+    import std.typecons : Yes;
     import std.json : parseJSON;
     auto responses = client.batch([
-            tuple("one", JSONValue(3)),
-            tuple("two", JSONValue(`{"b": false, "c": -50, "d": "fifty"}`.parseJSON)),
-            tuple("three", JSONValue())
+            batchReq("one", JSONValue(3)),
+            batchReq("one", JSONValue(3), Yes.notify),
+            batchReq("two", JSONValue(`{"b": false, "c": -50, "d": "fifty"}`.parseJSON)),
+            batchReq("three", JSONValue()),
+            batchReq("three", JSONValue(), Yes.notify)
     ]);
+
+    assert(responses.length == 3); // Notifications don't return a response.
     assert(responses[2].result == JSONValue(100));
 }
 ```
@@ -70,7 +74,6 @@ host them properly it once the project is ready.
 
 ## Non-conforming details
 
-* (tmp) Batches on the client do not support notifications.
 * (tmp) The server doesn't construct error responses yet.
 
 ## Future plans

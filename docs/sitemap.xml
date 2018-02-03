@@ -9,6 +9,7 @@
 <url><loc>http://127.0.0.1/jsonrpc/exception/InvalidParameterException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/exception/TypeException.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc.html</loc></url>
+<url><loc>http://127.0.0.1/jsonrpc/jsonrpc/batchReq.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/executeMethod.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/handleClient.html</loc></url>
 <url><loc>http://127.0.0.1/jsonrpc/jsonrpc/RPCClient.html</loc></url>

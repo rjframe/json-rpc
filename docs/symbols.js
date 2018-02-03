@@ -8,6 +8,7 @@ var symbols = [
 {name: 'jsonrpc.exception.InvalidParameterException', kind: "classdeclaration", path: './jsonrpc/exception/InvalidParameterException.html', attributes: []},
 {name: 'jsonrpc.exception.TypeException', kind: "classdeclaration", path: './jsonrpc/exception/TypeException.html', attributes: []},
 {name: 'jsonrpc.jsonrpc', kind: "module", path: './jsonrpc/jsonrpc.html', attributes: []},
+{name: 'jsonrpc.jsonrpc.batchReq', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/batchReq.html', attributes: ["auto"]},
 {name: 'jsonrpc.jsonrpc.executeMethod', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/executeMethod.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.handleClient', kind: "functiondeclaration", path: './jsonrpc/jsonrpc/handleClient.html', attributes: []},
 {name: 'jsonrpc.jsonrpc.RPCClient', kind: "classdeclaration", path: './jsonrpc/jsonrpc/RPCClient.html', attributes: []},
