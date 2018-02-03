@@ -651,8 +651,7 @@ struct RPCResponse {
                     valid JSON-RPC 2.0 response.
     */
     this(JSONValue data) in {
-        assert("jsonrpc" in data && "id" in data
-                && ("result" in data).xor("error" in data),
+        assert("jsonrpc" in data && ("result" in data).xor("error" in data),
                 "Malformed response: missing required field(s).");
     } do {
         _data = data;
@@ -831,23 +830,24 @@ class RPCClient(API, Transport = TCPTransport)
         _transport.send(RPCRequest(func, params).toJSONString());
     }
 
-    import std.typecons : Tuple;
     /** Execute a batch of function calls.
 
         Params:
-            methods = An array of Tuple of values
-                      (method-name, JSONValue(parameters))
+            requests = An array of BatchRequests, constructed via the
+                       `batchReq` function.
 
         Returns:
             An array of RPCResponse objects, in the same order as the respective
             request.
 
         Notes:
-            This does not yet support notifications in batch requests.
+            Notifications do not get responses; if three requests are made, and
+            one is a notification, only two responses will be returned.
 
         Example:
         ---
-        import std.typecons : tuple;
+        import std.typecons : Yes;
+
         interface API {
             void func1(int a);
             long func2(string s);
@@ -856,25 +856,34 @@ class RPCClient(API, Transport = TCPTransport)
         auto client = RPCClient!API("localhost", 54321);
 
         auto responses = client.batch([
-                tuple("func1", JSONValue(50)),
-                tuple("func1", JSONValue(-1)),
-                tuple("func2", JSONValue("hello")),
-                tuple("func3", JSONValue()),
-                tuple("func1", JSONValue(123))
+                batchReq("func1", JSONValue(50)),
+                batchReq("func1", JSONValue(-1), Yes.notify),
+                batchReq("func2", JSONValue("hello")),
+                batchReq("func3", JSONValue(), Yes.notify),
+                batchReq("func1", JSONValue(123))
         ]);
         ---
     */
-    RPCResponse[] batch(Tuple!(string, JSONValue)[] methods) {
+    RPCResponse[] batch(BatchRequest[] requests) {
         JSONValue[] reqs;
-        foreach (method; methods) {
-            reqs ~= RPCRequest(_nextId++, method[0], method[1])._data;
+        bool allAreNotifications = true;
+
+        foreach (request; requests) {
+            if (request.isNotification) {
+                reqs ~= RPCRequest(request.method, request.params)._data;
+            } else {
+                allAreNotifications = false;
+                reqs ~= RPCRequest(
+                        _nextId++, request.method, request.params)._data;
+            }
         }
         auto r = JSONValue(reqs);
         _transport.send(r.toJSON());
 
         RPCResponse[] responses;
-        auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
+        if (allAreNotifications) return responses;
 
+        auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
         foreach (resp; resps.array) {
             responses ~= RPCResponse(resp);
         }
@@ -893,6 +902,45 @@ class RPCClient(API, Transport = TCPTransport)
     this(Transport transport) {
         _transport = transport;
     }
+}
+
+import std.typecons : Flag, No;
+/** Create a BatchRequest to pass to an RPCClient's `batch` function.
+        string method, JSONValue params, Flag!"notify" notify = No.notify) {
+
+    Params:
+        method = The name of the remote method to call.
+        params = A JSONValue scalar or object/array containing the method
+                 parameters.
+        notify = Yes.notify if the request is a notification; No.notify
+                 otherwise.
+
+    Returns:
+        A BatchRequest to be passed to an RPCClient's batch function.
+
+    Example:
+    ---
+    import std.typecons : Yes;
+
+    interface API {
+        void func1(int a);
+        long func2(string s);
+        long func3();
+    }
+    auto client = RPCClient!API("localhost", 54321);
+
+    auto responses = client.batch([
+            batchReq("func1", JSONValue(50)),
+            batchReq("func1", JSONValue(-1), Yes.notify),
+            batchReq("func2", JSONValue("hello")),
+            batchReq("func3", JSONValue(), Yes.notify),
+            batchReq("func1", JSONValue(123))
+    ]);
+    ---
+*/
+auto batchReq(
+        string method, JSONValue params, Flag!"notify" notify = No.notify) {
+    return BatchRequest(method, params, notify);
 }
 
 /** Implementation of a JSON-RPC server.
@@ -1028,7 +1076,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
     Only public members of the API object are callable as a remote function.
 
     Compile_Time_Parameters:
-        API = The class or struct containing the function to call.
+        API = The class containing the function to call.
 
     Params:
         request =   The request from the client.
@@ -1173,6 +1221,23 @@ static string GenCaller(API, string method)() pure {
     func ~= ");\n}\n";
 
     return func;
+}
+
+/** Container for request data submitted in a batch.
+
+    This allows me to send requests and notifications in a single object without
+    doing crazy stuff.
+*/
+struct BatchRequest {
+    this(string method, JSONValue params, bool isNotification = false) {
+        this.method = method;
+        this.params = params;
+        this.isNotification = isNotification;
+    }
+
+    string method;
+    JSONValue params;
+    bool isNotification;
 }
 
 /** Unwrap a scalar value from a JSONValue object. */
@@ -1395,21 +1460,19 @@ unittest {
 
     sock.receiveReturnValue =
         `[{"id":0,"jsonrpc":"2.0","result":null},
-          {"id":1,"jsonrpc":"2.0","result":null},
-          {"id":2,"jsonrpc":"2.0","result":123},
-          {"id":3,"jsonrpc":"2.0","result":0},
-          {"id":4,"jsonrpc":"2.0","result":null}]`;
+          {"id":1,"jsonrpc":"2.0","result":123},
+          {"id":2,"jsonrpc":"2.0","result":0}]`;
 
-    import std.typecons : tuple;
+    import std.typecons : Yes;
     auto responses = client.batch([
-            tuple("func1", JSONValue(50)),
-            tuple("func1", JSONValue(-1)),
-            tuple("func2", JSONValue("hello")),
-            tuple("func3", JSONValue()),
-            tuple("func1", JSONValue(123))
+            batchReq("func1", JSONValue(50)),
+            batchReq("func1", JSONValue(-1), Yes.notify),
+            batchReq("func2", JSONValue("hello")),
+            batchReq("func3", JSONValue()),
+            batchReq("func1", JSONValue(123), Yes.notify)
     ]);
 
-    assert(responses[0].result == JSONValue(null));
-    assert(responses[2].result == JSONValue(123));
-    assert(responses[3].result == JSONValue(0));
+    assert(responses[0].result == JSONValue(null), "Incorrect [0] result");
+    assert(responses[1].result == JSONValue(123), "Incorrect [1] result");
+    assert(responses[2].result == JSONValue(0), "Incorrect [2] result");
 }
