@@ -833,7 +833,7 @@ class RPCClient(API, Transport = TCPTransport)
     /** Execute a batch of function calls.
 
         Params:
-            requests = An array of BatchRequests, constructed via the
+            requests = A list of BatchRequests, each constructed via the
                        `batchReq` function.
 
         Returns:
@@ -855,16 +855,16 @@ class RPCClient(API, Transport = TCPTransport)
         }
         auto client = RPCClient!API("localhost", 54321);
 
-        auto responses = client.batch([
+        auto responses = client.batch(
                 batchReq("func1", JSONValue(50)),
                 batchReq("func1", JSONValue(-1), Yes.notify),
                 batchReq("func2", JSONValue("hello")),
                 batchReq("func3", JSONValue(), Yes.notify),
                 batchReq("func1", JSONValue(123))
-        ]);
+        );
         ---
     */
-    RPCResponse[] batch(BatchRequest[] requests) {
+    RPCResponse[] batch(BatchRequest[] requests ...) {
         JSONValue[] reqs;
         bool allAreNotifications = true;
 
@@ -929,13 +929,13 @@ import std.typecons : Flag, No;
     }
     auto client = RPCClient!API("localhost", 54321);
 
-    auto responses = client.batch([
+    auto responses = client.batch(
             batchReq("func1", JSONValue(50)),
             batchReq("func1", JSONValue(-1), Yes.notify),
             batchReq("func2", JSONValue("hello")),
             batchReq("func3", JSONValue(), Yes.notify),
             batchReq("func1", JSONValue(123))
-    ]);
+    );
     ---
 */
 auto batchReq(
@@ -1464,13 +1464,13 @@ unittest {
           {"id":2,"jsonrpc":"2.0","result":0}]`;
 
     import std.typecons : Yes;
-    auto responses = client.batch([
+    auto responses = client.batch(
             batchReq("func1", JSONValue(50)),
             batchReq("func1", JSONValue(-1), Yes.notify),
             batchReq("func2", JSONValue("hello")),
             batchReq("func3", JSONValue()),
             batchReq("func1", JSONValue(123), Yes.notify)
-    ]);
+    );
 
     assert(responses[0].result == JSONValue(null), "Incorrect [0] result");
     assert(responses[1].result == JSONValue(123), "Incorrect [1] result");

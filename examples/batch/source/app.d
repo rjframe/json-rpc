@@ -35,22 +35,23 @@ void main(string[] args)
     writeln("Starting client...");
     auto client = new RPCClient!API(hostname, port);
 
-    import std.typecons : tuple;
-    auto responses = client.batch([
-            tuple("someFunc", JSONValue(5)),
-            tuple("someFunc", JSONValue(6)),
-            tuple("add", JSONValue([1, 2])),
-            tuple("someFunc", JSONValue(7)),
-            tuple("otherFunc", JSONValue()),
-            tuple("someFunc", JSONValue(8)),
-            tuple("add", JSONValue([1, -52])),
-            tuple("add", JSONValue(`{"one":1,"two":-52}`.parseJSON))
-    ]);
+    import std.typecons : Yes;
+    auto responses = client.batch(
+            batchReq("someFunc", JSONValue(5)),
+            batchReq("someFunc", JSONValue(6), Yes.notify),
+            batchReq("add", JSONValue([1, 2])),
+            batchReq("someFunc", JSONValue(7)),
+            batchReq("otherFunc", JSONValue()),
+            batchReq("someFunc", JSONValue(8)),
+            batchReq("add", JSONValue([1, -52]), Yes.notify),
+            batchReq("add", JSONValue(`{"one":1,"two":-52}`.parseJSON))
+    );
 
+    assert(responses.length == 6); // Notifications don't return a response.
     assert(responses[0].result == JSONValue(null));
-    assert(responses[2].result == JSONValue(3));
-    assert(responses[4].result == JSONValue(null));
-    assert(responses[6].result == JSONValue(-51));
+    assert(responses[1].result == JSONValue(3));
+    assert(responses[3].result == JSONValue(null));
+    assert(responses[5].result == JSONValue(-51));
 
     foreach (resp; responses) {
         writeln(resp);
