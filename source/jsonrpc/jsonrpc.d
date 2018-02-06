@@ -414,90 +414,12 @@ struct RPCResponse {
     /** The JSON-RPC protocol version. */
     @property string protocolVersion() { return _data["jsonrpc"].str; }
 
+    // TODO: These are mutually exclusive; I shouldn't have properties for both
+    // as valid accessors.
     @property JSONValue result() { return _data["result"]; }
-
-    @property JSONValue error() { assert(0); }
+    @property JSONValue error() { return _data["error"]; }
 
     @property bool hasError() { return !(_data["error"].isNull); }
-
-    /** Standard error codes.
-
-        Codes between -32768 and -32000 (inclusive) are reserved;
-        application-specific codes may be defined outside that range.
-    */
-    enum ErrorCode : int {
-        ParseError = -32700,
-        InvalidRequest = -32600,
-        MethodNotFound = -32601,
-        InvalidParams = -32602,
-        InternalError = -32603
-        // -32000 to -32099 are reserved for implementation-defined server
-        // errors.
-    }
-
-    /** An Error object returned by the server as a response to a bad request.
-    */
-    struct Error {
-        private:
-
-        // TODO: Place _errorCode and _message into _data.
-        int _errorCode;
-        string _message;
-        JSONValue _data;
-
-        public:
-
-        /** Retrieve the error code. */
-        @property int errorCode() { return _errorCode; }
-
-        /** Retrieve the error message. */
-        @property string message() { return _message; }
-
-        /** Retrieve the data related to the error. */
-        @property JSONValue data() { return _data; }
-
-        /** Construct an Error object to send to the RPC client.
-
-            Params:
-                errCode =   The error code to return to the client.
-                msg     =   The error message that describes the error. For
-                            standard error codes, leaving msg empty will use a
-                            standard error message; for application error codes,
-                            the message will be empty.
-                errData =   Additional data related to the error to send to the
-                            client.
-
-        */
-        this(int errCode, string msg = "", JSONValue errData = JSONValue()) {
-            _errorCode = errCode;
-            _data = errData;
-
-            if (msg.length > 0) {
-                _message = msg;
-            } else {
-                switch (errCode) {
-                    case ErrorCode.ParseError:
-                        _message = "An error occurred while parsing the JSON text.";
-                        break;
-                    case ErrorCode.InvalidRequest:
-                        _message = "The JSON sent is not a valid Request object.";
-                        break;
-                    case ErrorCode.MethodNotFound:
-                        _message = "The called method is not available.";
-                        break;
-                    case ErrorCode.InvalidParams:
-                        _message = "The method was called with invalid parameters.";
-                        break;
-                    case ErrorCode.InternalError:
-                        _message = "Internal server error.";
-                        break;
-                    default:
-                        raise!(InvalidArgumentException, msg)
-                                ("The message cannot be empty for application error codes.");
-                }
-            }
-        }
-    }
 
     /** Convert the RPCResponse to a JSON string to send to the client. */
     string toJSONString() {
@@ -513,10 +435,6 @@ struct RPCResponse {
     }
 
     package:
-
-    // Note: Only one of result, _error will be present.
-    JSONValue _data;
-    Error _error; // TODO: This will be removed and placed in _data.
 
     /** Construct a response to send to the client.
 
@@ -537,42 +455,7 @@ struct RPCResponse {
         _data["result"] = result;
     }
 
-    /** Construct a response to send to the client.
-
-        The id must be the same as the RPCRequest to which the server is
-        responding, and can be numeric, string, or null.
-
-        This RPCResponse object must contain either a result or error before
-        sending to the client; it is not ready immediately after construction.
-
-        Compile_Time_Parameters:
-            T = The type of the response ID.
-
-        Params:
-            id =        The ID of this response. This matches the relevant
-                        request.
-
-        Example:
-        ---
-        // Construct a response and append a standard error to it.
-        auto response = RPCResponse(5).withError(ErrorCode.InvalidRequest);
-        ---
-    */
-    this(T)(T id) {
-        _data["jsonrpc"] = "2.0";
-        _data["id"] = id;
-    }
-
-    @test("RPCResponse constructors.")
-    unittest {
-        auto resp = RPCResponse("my_id", JSONValue("res"));
-        auto resp2 = RPCResponse("id2");
-        auto resp3 = RPCResponse(null, JSONValue([1, 2, 3]));
-    }
-
     /** Construct a predefined error response to send to the client.
-
-        An standard Error object matching the error code is constructed.
 
         Compile_Time_Parameters:
             T = The type of the response ID.
@@ -580,42 +463,13 @@ struct RPCResponse {
         Params:
             id =    The ID of this response. This matches the relevant request.
             error = The code of the standard error to send.
+            data =  Any additional data to add to the error response.
     */
-    this(T)(T id, ErrorCode error) {
+    this(T)(T id, StandardErrorCode error, JSONValue errData = JSONValue()) {
         _data["jsonrpc"] = "2.0";
         _data["id"] = id;
-        _error = Error(error);
-    }
-
-    /** Attach an Error to an RPCResponse.
-
-        Params:
-            resp =  The RPCResponse to attach the error to.
-            error = The error object to attach to the response.
-
-        Example:
-        ---
-        auto resp = RPCResponse(0).withError(myError);
-        ---
-    */
-    static ref RPCResponse withError(ref RPCResponse resp, Error error) {
-        // We throw if a result is present; the spec allows one xor the other.
-        assert(0);
-    }
-
-    /** Attach a standard error to an RPCResponse.
-
-        Params:
-            resp =  The RPCResponse to attach the error to.
-            error = The error code of the standard error.
-
-        Example:
-        ---
-        auto resp = RPCResponse(0).withError(ErrorCode.InvalidRequest);
-        ---
-    */
-    static ref RPCResponse withError(ref RPCResponse resp, ErrorCode error) {
-        assert(0);
+        _data["error"] = getStandardError(error);
+        if (errData.type != JSON_TYPE.NULL) _data["error"]["data"] = errData;
     }
 
     /** Construct an RPCResponse from a JSON string.
@@ -636,11 +490,29 @@ struct RPCResponse {
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
             return RPCResponse(json);
         } else {
-            raise!(InvalidDataReceivedException, json, str)
-                ("JSON Response is missing required fields.");
-            assert(0);
+            return RPCResponse(json["id"].integer, StandardErrorCode.InvalidRequest);
         }
     }
+
+    @test("RPCResponse.fromJSONString returns an error on invalid request.")
+    unittest {
+        auto resp = RPCResponse.fromJSONString(
+                `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`);
+        assert(resp.id == 0, "Incorrect ID.");
+        assert(resp.error["code"] == JSONValue(StandardErrorCode.InvalidRequest),
+                "Incorrect error.");
+    }
+
+    @test("RPCResponse.fromJSONString converts JSON to RPCResponse")
+    unittest {
+        auto res = RPCResponse.fromJSONString(
+                `{"jsonrpc": "2.0", "id": 0, "method": "func", "result": 0}`);
+        assert(res.id == 0, "Incorrect ID.");
+        assert(res.result.integer == 0, "Incorrect result.");
+    }
+
+    // Note/TODO: Only one of result, error will be present in the response.
+    JSONValue _data;
 
     private:
 
@@ -656,6 +528,21 @@ struct RPCResponse {
     } do {
         _data = data;
     }
+}
+
+/** Standard error codes.
+
+    Codes between -32768 and -32099 (inclusive) are reserved for pre-defined
+    errors; application-specific codes may be defined outside that range.
+*/
+enum StandardErrorCode : int {
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InternalError = -32603
+    // -32000 to -32099 are reserved for implementation-defined server
+    // errors.
 }
 
 /** Implementation of a JSON-RPC client.
@@ -1108,11 +995,15 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
                 } else if (request.idType == JSON_TYPE.NULL) {
                     return RPCResponse(null, JSONValue(retval));
                 }
-                assert(0, "Invalid request type.");
+                return RPCResponse(
+                        request._data["id"],
+                        StandardErrorCode.InvalidRequest,
+                        JSONValue("Invalid request ID type."));
             }
         }
     }
-    assert(0, "executeMethod should never reach the end of the function.");
+    return RPCResponse(
+            request.id, StandardErrorCode.MethodNotFound, request._data);
 }
 
 private:
@@ -1237,6 +1128,43 @@ struct BatchRequest {
     string method;
     JSONValue params;
     bool isNotification;
+}
+
+/** Return error data for JSON-RPC and RPCServer standard error codes.
+
+    Params:
+        code = A StandardErrorCode set to the error number.
+
+    Returns:
+        The "error" dictionary to attach to the RPCResponse.
+
+    Example:
+    ---
+    auto resp = RPCResponse(0, getStandardError(StandardErrorCode.InvalidRequest);
+    ---
+*/
+private JSONValue getStandardError(StandardErrorCode code) {
+    auto err = JSONValue();
+    err["code"] = code;
+    final switch (code) {
+        case StandardErrorCode.ParseError:
+            err["message"] = "An error occurred while parsing the JSON text.";
+            break;
+        case StandardErrorCode.InvalidRequest:
+            err["message"] = "The JSON sent is not a valid Request object.";
+            break;
+        case StandardErrorCode.MethodNotFound:
+            err["message"] = "The called method is not available.";
+            break;
+        case StandardErrorCode.InvalidParams:
+            err["message"] = "The method was called with invalid parameters.";
+            break;
+        case StandardErrorCode.InternalError:
+            err["message"] = "Internal server error.";
+            break;
+    }
+
+    return err;
 }
 
 /** Unwrap a scalar value from a JSONValue object. */
@@ -1413,6 +1341,35 @@ unittest {
     auto ret = executeMethod(
             RPCRequest("áðý", "øbæårößΓαζ", JSONValue("éçφωτz")), api);
     assert(ret.result == JSONValue("éçφωτzâいはろшь ж๏เ"));
+}
+
+@test("executeMethod returns error when the method doesn't exist")
+unittest {
+    auto api = new MyAPI();
+    auto r1 = executeMethod(RPCRequest(0, "noFunctionHere"), api);
+
+    assert(r1.id!long == 0);
+    assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound, "Wrong error.");
+    assert(r1.error["data"]["method"].str == "noFunctionHere",
+            "Did not include method.");
+}
+
+@test("executeMethod returns error on invalid request ID")
+unittest {
+    auto api = new MyAPI();
+
+    auto req = RPCRequest(0, "retTrue");
+    req._data["id"] = JSONValue([1,2]);
+    auto resp = executeMethod(req, api);
+
+    import std.stdio;
+    writeln(resp);
+
+    // The ID is not accessible outside this package, but does need to be
+    // correct.
+    assert(resp._data["id"] == JSONValue([1,2]));
+    assert(resp.error["code"].integer == StandardErrorCode.InvalidRequest,
+            "Incorrect error.");
 }
 
 @test("[DOCTEST] RPCClient example: opDispatch")
