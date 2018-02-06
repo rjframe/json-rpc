@@ -419,7 +419,9 @@ struct RPCResponse {
     @property JSONValue result() { return _data["result"]; }
     @property JSONValue error() { return _data["error"]; }
 
-    @property bool hasError() { return !(_data["error"].isNull); }
+    @property bool hasError() {
+        return "error" in _data && !(_data["error"].isNull);
+    }
 
     /** Convert the RPCResponse to a JSON string to send to the client. */
     string toJSONString() {
@@ -600,6 +602,8 @@ class RPCClient(API, Transport = TCPTransport)
         Throws:
             InvalidArgumentException if the argument types do not match the
             remote interface.
+            RPCErrorException if the server returns an error response. Inspect
+            the exception payload for details.
 
         Example:
         ---
@@ -644,11 +648,15 @@ class RPCClient(API, Transport = TCPTransport)
         }
 
         // TODO: Need to reconstruct arrays and AAs too.
-        // TODO: Need to handle error responses as well.
-        auto returnVal = call(apiFunc, jsonArgs).result;
+        auto response = call(apiFunc, jsonArgs);
+        if (response.hasError()) {
+            raise!(RPCErrorException, response)
+                    ("Server error: " ~ response.error["message"].str);
+        }
+
         static if (is(returnType: void)) {
             return;
-        } else return unwrapValue!(returnType)(returnVal);
+        } else return unwrapValue!(returnType)(response.result);
     }
 
     /** Make a function call on the RPC server.
