@@ -274,7 +274,7 @@ struct RPCRequest {
         assert(req.params.array == [JSONValue(0), JSONValue(1)]);
     }
 
-    @test("fromJSONString converts JSON to RPCRequest")
+    @test("RPCRequest.fromJSONString converts JSON to RPCRequest")
     unittest {
         auto req = RPCRequest.fromJSONString(
                 `{"jsonrpc": "2.0", "id": 0, "method": "func", "params": [0, 1]}`);
@@ -284,7 +284,7 @@ struct RPCRequest {
                 "Incorrect params.");
     }
 
-    @test("fromJSONString creates notifications")
+    @test("RPCRequest.fromJSONString creates notifications")
     unittest {
         auto req = RPCRequest.fromJSONString(
                 `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`);
@@ -294,7 +294,7 @@ struct RPCRequest {
                 "Incorrect params.");
     }
 
-    @test("fromJSONString throws exception on invalid input")
+    @test("RPCRequest.fromJSONString throws exception on invalid input")
     unittest {
         import std.exception : assertThrown;
 
@@ -999,8 +999,7 @@ class RPCServer(API, Listener = TCPListener!API)
                                    the backlog before rejecting connections.
     */
     void listen(int maxQueuedConnections = 10) {
-        _listener.listen!(handleClient!API)(
-                _api, maxQueuedConnections);
+        _listener.listen!(handleClient!API)(_api, maxQueuedConnections);
     }
 
     private:
@@ -1039,13 +1038,14 @@ class RPCServer(API, Listener = TCPListener!API)
 */
 void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         if (is(Transport == struct)) {
-    // TODO: On error, close the socket.
+    // TODO: On error/close, close the socket.
+    // e.g.,  while(transport.isActive) {
     while (true) {
         auto received = transport.receiveJSONObjectOrArray();
         if (received[0] == '[') {
             auto batch = received.parseJSON();
             JSONValue[] responses;
-            // TODO: Could parallelize these.
+            // TODO: Could parallelize these. Probably use constructor flag(?)
             foreach (request; batch.array) {
                 // TODO: Horribly inefficient. Need a new constructor.
                 auto req = RPCRequest.fromJSONString(request.toJSON());
