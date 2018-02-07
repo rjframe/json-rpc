@@ -933,9 +933,7 @@ class RPCServer(API, Listener = TCPListener!API)
 */
 void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         if (is(Transport == struct)) {
-    // TODO: On error/close, close the socket.
-    // e.g.,  while(transport.isActive) {
-    while (true) {
+    while (transport.isAlive()) {
         auto received = transport.receiveJSONObjectOrArray();
         if (received[0] == '[') {
             auto batch = received.parseJSON();

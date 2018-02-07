@@ -120,11 +120,14 @@ struct TCPTransport {
         }
     }
 
-    /** Close the socket. */
+    /** Close the transport's underlying socket. */
     void close() {
         _socket.shutdown(SocketShutdown.BOTH);
         _socket.close();
     }
+
+    /** Query the transport to see if it's still active. */
+    bool isAlive() { return _socket.isAlive(); }
 
     private:
 
