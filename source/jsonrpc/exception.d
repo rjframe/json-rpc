@@ -46,6 +46,13 @@ class ConnectionException : Exception {
     this() { super(""); }
 }
 
+/** Raised when a function call via RPCClient.opDispatch receives an error
+    response.
+*/
+class RPCErrorException : Exception {
+    this() { super(""); }
+}
+
 /** Raised when attempting to access a JSONValue via a different type than the
     underlying type.
 */

@@ -258,7 +258,7 @@ struct RPCRequest {
             }
         } else {
             raise!(InvalidDataReceivedException, str)
-                ("Response is missing 'jsonrpc', 'id', and/or 'method' fields.");
+                ("Request is missing 'jsonrpc', 'id', and/or 'method' fields.");
             assert(0);
         }
     }
@@ -527,7 +527,7 @@ struct RPCResponse {
     this(JSONValue data) in {
         assert("jsonrpc" in data && ("result" in data).xor("error" in data),
                 "Malformed response: missing required field(s).");
-    } do {
+    } body {
         _data = data;
     }
 }
@@ -943,6 +943,11 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
             // TODO: Could parallelize these. Probably use constructor flag(?)
             foreach (request; batch.array) {
                 // TODO: Horribly inefficient. Need a new constructor.
+
+                // TODO: fromJSONString could fail; would need to return either
+                // InvalidDataReceivedException -> InvalidRequest or
+                // JSONException -> ParseError.
+                // try/catch will get messy; need to change the way I do this.
                 auto req = RPCRequest.fromJSONString(request.toJSON());
                 if (req.isNotification) {
                     executeMethod(req, api);
@@ -1039,10 +1044,6 @@ auto execRPCMethod(API, string method)(RPCRequest request, API api) {
     } else {
         return callRPCFunc!(method, JSONValue)(api, request.params);
     }
-    // TODO: I'm hitting this when the called method doesn't exist. I either need
-    // to validate before we get here, or throw an exception with an accurate
-    // message.
-    assert(0, "Should have returned by now.");
 }
 
 /** Generate the function `callRPCFunc` that will call the API function
