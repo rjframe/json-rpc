@@ -10,6 +10,8 @@ d:
     - dmd-2.078.1
     - dmd-2.077.1
     - dmd-2.076.1
+    - ldc-1.7.0 # 2.077.1
+    - ldc-1.6.0 # 2.076.1
 
 script:
     - dub test -b unittest-cov --compiler=${DC}
