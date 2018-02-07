@@ -52,13 +52,13 @@ void main() {
     // Send a batch.
     import std.typecons : Yes;
     import std.json : parseJSON;
-    auto responses = client.batch([
+    auto responses = client.batch(
             batchReq("one", JSONValue(3)),
             batchReq("one", JSONValue(3), Yes.notify),
             batchReq("two", JSONValue(`{"b": false, "c": -50, "d": "fifty"}`.parseJSON)),
             batchReq("three", JSONValue()),
             batchReq("three", JSONValue(), Yes.notify)
-    ]);
+    );
 
     assert(responses.length == 3); // Notifications don't return a response.
     assert(responses[2].result == JSONValue(100));
