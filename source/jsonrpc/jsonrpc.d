@@ -936,7 +936,33 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
     while (transport.isAlive()) {
         auto received = transport.receiveJSONObjectOrArray();
         if (received[0] == '[') {
-            auto batch = received.parseJSON();
+            JSONValue batch;
+            try {
+                batch = received.parseJSON();
+                if (batch.array.length < 3) {
+                    // SPEC: Send a single response if the array is empty.
+                    // TODO: How do I handle the ID?
+                    transport.send(
+                            RPCResponse(
+                                null,
+                                StandardErrorCode.InvalidRequest,
+                                JSONValue("Received batch with no requests.")
+                            )._data.toJSON()
+                    );
+                    continue;
+                }
+            } catch (JSONException) {
+                // TODO: The spec says to send a single response, but how do I
+                // handle the ID? Need to check other implementations.
+                transport.send(
+                        RPCResponse(
+                            null,
+                            StandardErrorCode.ParseError,
+                            JSONValue("Batch request is malformed.")
+                        )._data.toJSON()
+                );
+                continue;
+            }
             JSONValue[] responses;
             // TODO: Could parallelize these. Probably use constructor flag(?)
             foreach (request; batch.array) {
