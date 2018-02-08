@@ -423,17 +423,14 @@ struct RPCResponse {
         return "error" in _data && !(_data["error"].isNull);
     }
 
-    /** Convert the RPCResponse to a JSON string to send to the client. */
-    string toJSONString() {
-        import std.format : format;
-        string ret =
-`{
-    "jsonrpc": "%s",
-    "result": %s,
-    "id": %s`.format(protocolVersion, result, id);
-        ret ~= "\n}";
+    /** Convert the RPCResponse to a JSON string to send to the client.
 
-        return ret;
+        Params:
+            prettyPrint = Yes to pretty-print the JSON output; No for efficient
+                          output.
+    */
+    string toJSONString(Flag!"prettyPrint" prettyPrint = No.prettyPrint) {
+        return _data.toJSON(prettyPrint);
     }
 
     package:
@@ -947,7 +944,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
                                 null,
                                 StandardErrorCode.InvalidRequest,
                                 JSONValue("Received batch with no requests.")
-                            )._data.toJSON()
+                            ).toJSONString()
                     );
                     continue;
                 }
@@ -959,7 +956,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
                             null,
                             StandardErrorCode.ParseError,
                             JSONValue("Batch request is malformed.")
-                        )._data.toJSON()
+                        ).toJSONString()
                 );
                 continue;
             }
