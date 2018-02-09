@@ -757,6 +757,11 @@ class RPCClient(API, Transport = TCPTransport)
         ---
     */
     RPCResponse[] batch(BatchRequest[] requests ...) {
+        if (requests.length == 0) {
+            raise!(InvalidArgumentException)
+                    ("requests cannot be an empty array.");
+        }
+
         JSONValue[] reqs;
         bool allAreNotifications = true;
 
@@ -776,8 +781,14 @@ class RPCClient(API, Transport = TCPTransport)
         if (allAreNotifications) return responses;
 
         auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
-        foreach (resp; resps.array) {
-            responses ~= RPCResponse(resp);
+        if (resps.type == JSON_TYPE.ARRAY) {
+            foreach (resp; resps.array) {
+                responses ~= RPCResponse(resp);
+            }
+        } else {
+            // Single non-array (error?) response due to a malformed or empty
+            // batch.
+            responses ~= RPCResponse(resps);
         }
         return responses;
     }
