@@ -67,7 +67,7 @@ package:
     Additional data can be provided, both for inspection by catching code and
     for viewing/logging if unhandled.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         ExceptionClass = The exception class to throw.
         T...           = A list of objects to include as part of the exception.
 

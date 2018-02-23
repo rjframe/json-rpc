@@ -142,7 +142,7 @@ struct TCPTransport {
 
 /** Listen for incoming connections and pass clients to a handler function.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API = The class containing the methods for the server to execute.
 */
 struct TCPListener(API) {
@@ -168,7 +168,7 @@ struct TCPListener(API) {
         `listen` will call the specified handler function in a new thread to
         handle each client it accepts.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             handler = The handler function to call when a client connects.
 
         Params:

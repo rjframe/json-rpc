@@ -71,7 +71,7 @@ struct RPCRequest {
         The ID must be a string, a number, or null; null is not recommended for
         use as an ID.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             T = The type of the request ID.
 
         Params:
@@ -128,7 +128,7 @@ struct RPCRequest {
 
         There is no ID for notifications.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             T = The type of the ID; the default type is `long`, but JSON-RPC
                 allows IDs to also be string or typeof(null).
 
@@ -314,7 +314,7 @@ struct RPCRequest {
     /** Construct an RPCRequest with the specified remote method name and
         arguments.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             T = The type of the request ID.
 
         Params:
@@ -440,7 +440,7 @@ struct RPCResponse {
         The id must be the same as the RPCRequest to which the server is
         responding, and can be numeric, string, or null.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             T = The type of the response ID.
 
         Params:
@@ -456,7 +456,7 @@ struct RPCResponse {
 
     /** Construct a predefined error response to send to the client.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             T = The type of the response ID.
 
         Params:
@@ -546,7 +546,7 @@ enum StandardErrorCode : int {
 
 /** Implementation of a JSON-RPC client.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API =       An interface containing the function definitions to call on
                     the remote server. <BR>
         Transport = The network transport to use; by default, we use a
@@ -586,7 +586,7 @@ class RPCClient(API, Transport = TCPTransport)
         the remote API can be called as if it was a member of the RPC client,
         and that function call will be forwarded to the remote server.
 
-        Compile_Time_Parameters:
+        Template_Parameters:
             apiFunc = The name of the fake method to dispatch. <BR>
             ARGS... = A list of parameter types.
 
@@ -849,7 +849,7 @@ auto batchReq(
 
     This implementation only supports communication via TCP sockets.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API =      A class or struct containing the functions available for the
                    client to call. <BR>
         Listener = The object to use to manage client connections. By default, a
@@ -930,7 +930,7 @@ class RPCServer(API, Listener = TCPListener!API)
     The `listen` method of the RPCServer calls this in a new thread to handle
     client requests. This is not intended to be called by user code.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API =       The class containing the RPC functions.
         Transport = The type of the network transport to use; by default, this
                     is a TCPTransport.
@@ -1006,7 +1006,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
 
     Only public members of the API object are callable as a remote function.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API = The class containing the function to call.
 
     Params:
@@ -1048,14 +1048,16 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
         }
     }
     return RPCResponse(
-            request.id, StandardErrorCode.MethodNotFound, request._data);
+            request.id,
+            StandardErrorCode.MethodNotFound,
+            request._data);
 }
 
 private:
 
 /** Execute an RPC method and return its result.
 
-    Compile_Time_Parameters:
+    Template_Parameters:
         API    = The class providing the executable functions.
         method = The name of the method to call.
 
