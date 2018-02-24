@@ -868,6 +868,7 @@ auto batchReq(
 */
 class RPCServer(API, Listener = TCPListener!API)
         if (is(API == class) && is(Listener == struct)) {
+
     import std.socket;
 
     /** Construct an RPCServer!API object to communicate via TCP sockets.
@@ -942,55 +943,11 @@ class RPCServer(API, Listener = TCPListener!API)
 void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         if (is(Transport == struct)) {
     while (transport.isAlive()) {
-        auto received = transport.receiveJSONObjectOrArray();
-        if (received[0] == '[') {
-            JSONValue batch;
-            try {
-                batch = received.parseJSON();
-                if (batch.array.length < 3) {
-                    // SPEC: Send a single response if the array is empty.
-                    // TODO: How do I handle the ID?
-                    transport.send(
-                            RPCResponse(
-                                null,
-                                StandardErrorCode.InvalidRequest,
-                                JSONValue("Received batch with no requests.")
-                            ).toJSONString()
-                    );
-                    continue;
-                }
-            } catch (JSONException) {
-                // TODO: The spec says to send a single response, but how do I
-                // handle the ID? Need to check other implementations.
-                transport.send(
-                        RPCResponse(
-                            null,
-                            StandardErrorCode.ParseError,
-                            JSONValue("Batch request is malformed.")
-                        ).toJSONString()
-                );
-                continue;
-            }
-            JSONValue[] responses;
-            // TODO: Could parallelize these. Probably use constructor flag(?)
-            foreach (request; batch.array) {
-                // TODO: Horribly inefficient. Need a new constructor.
+        char[] received = receiveRequest(transport);
+        if (received.length == 0) continue;
 
-                // TODO: fromJSONString could fail; would need to return either
-                // InvalidDataReceivedException -> InvalidRequest or
-                // JSONException -> ParseError.
-                // try/catch will get messy; need to change the way I do this.
-                auto req = RPCRequest.fromJSONString(request.toJSON());
-                if (req.isNotification) {
-                    executeMethod(req, api);
-                } else {
-                    responses ~= executeMethod(req, api)._data;
-                }
-            }
-            if (responses.length > 0) {
-                auto data = JSONValue(responses);
-                transport.send(data.toJSON());
-            } // else: they were all notifications.
+        if (received[0] == '[') {
+            executeBatch(transport, api, received);
         } else {
             auto req = RPCRequest.fromJSONString(received);
             if (req.isNotification) {
@@ -1054,6 +1011,86 @@ RPCResponse executeMethod(API)(RPCRequest request, API api) {
 }
 
 private:
+
+char[] receiveRequest(Transport)(Transport transport) {
+    try {
+        return transport.receiveJSONObjectOrArray();
+    } catch (InvalidDataReceivedException ex) {
+        transport.send(
+                RPCResponse(
+                    null,
+                    StandardErrorCode.InvalidRequest,
+                    JSONValue(ex.msg)
+                ).toJSONString()
+        );
+    } catch (Exception) {
+        transport.send(
+                RPCResponse(
+                    null,
+                    StandardErrorCode.InternalError,
+                    JSONValue(
+                        "Unknown exception occurred while receiving data.")
+                ).toJSONString()
+        );
+    }
+    return [];
+}
+
+JSONValue parseBatch(Transport)(Transport transport, const char[] request) {
+    scope(failure) {
+        // TODO: The spec says to send a single response, but how do I
+        // handle the ID? Need to check other implementations.
+        transport.send(
+                RPCResponse(
+                    null,
+                    StandardErrorCode.ParseError,
+                    JSONValue("Batch request is malformed.")
+                ).toJSONString()
+        );
+        return JSONValue();
+    }
+
+    auto batch = request.parseJSON();
+    if (batch.array.length == 0) {
+        // SPEC: Send a single response if the array is empty.
+        // TODO: How do I handle the ID?
+        transport.send(
+                RPCResponse(
+                    null,
+                    StandardErrorCode.InvalidRequest,
+                    JSONValue("Received batch with no requests.")
+                ).toJSONString()
+        );
+        return JSONValue();
+    }
+    return batch;
+}
+
+void executeBatch(API, Transport)
+        (Transport transport, API api, const char[] received) {
+
+    JSONValue batch = parseBatch(transport, received);
+    if (batch.type == JSON_TYPE.NULL) return;
+
+    JSONValue[] responses;
+    // TODO: Could parallelize these. Probably use constructor flag(?)
+    foreach (request; batch.array) {
+        // TODO: Horribly inefficient. Need a new constructor.
+        // TODO: fromJSONString could fail; would need to return either
+        // InvalidDataReceivedException -> InvalidRequest or
+        // JSONException -> ParseError.
+        auto req = RPCRequest.fromJSONString(request.toJSON());
+        if (req.isNotification) {
+            executeMethod(req, api);
+        } else {
+            responses ~= executeMethod(req, api)._data;
+        }
+    }
+    if (responses.length > 0) {
+        auto data = JSONValue(responses);
+        transport.send(data.toJSON());
+    } // else: they were all notifications.
+}
 
 /** Execute an RPC method and return its result.
 
