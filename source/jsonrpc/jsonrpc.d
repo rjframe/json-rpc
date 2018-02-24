@@ -1499,6 +1499,24 @@ unittest {
     auto resp2 = client.call("func", JSONValue(3));
 }
 
+@test("[DOCTEST] RPCClient example: notify")
+unittest {
+    interface MyAPI { void func(int val); }
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport(sock);
+    auto client = new RPCClient!MyAPI(transport);
+
+    import std.json : JSONValue, parseJSON, toJSON;
+
+    client.notify("func", `{"val": 3}`.parseJSON);
+    assert(sock.lastDataSent ==
+            RPCRequest("func", `{"val":3}`.parseJSON)._data.toJSON);
+
+    client.notify("func", JSONValue(3));
+    assert(sock.lastDataSent ==
+            RPCRequest("func", `[3]`.parseJSON)._data.toJSON);
+}
+
 @test("[DOCTEST] Execute batches of requests.")
 unittest {
     interface API {

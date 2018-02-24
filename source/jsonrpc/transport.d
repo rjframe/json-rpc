@@ -249,9 +249,13 @@ version(unittest) {
         private char[] _receiveReturnValue =
                 cast(char[])`{"id":3,"result":[1,2,3]}`;
 
+        private char[] _lastDataSent;
+
         @property receiveReturnValue(string s) {
             _receiveReturnValue = cast(char[])s;
         }
+
+        @property lastDataSent() { return _lastDataSent; }
 
         @property char[] receiveReturnValue() { return _receiveReturnValue; }
 
@@ -293,6 +297,7 @@ version(unittest) {
 
         alias send = Socket.send;
         override @trusted ptrdiff_t send(const(void)[] buf) {
+            _lastDataSent = cast(char[])buf;
             return buf.length;
         }
 
