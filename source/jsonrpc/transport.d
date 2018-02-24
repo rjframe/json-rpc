@@ -127,7 +127,11 @@ struct TCPTransport {
     }
 
     /** Query the transport to see if it's still active. */
-    bool isAlive() { return _socket.isAlive(); }
+    nothrow
+    bool isAlive() {
+        scope(failure) return false;
+        return _socket.isAlive();
+    }
 
     private:
 
