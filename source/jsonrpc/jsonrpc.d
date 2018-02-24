@@ -1076,10 +1076,26 @@ void executeBatch(API, Transport)
     // TODO: Could parallelize these. Probably use constructor flag(?)
     foreach (request; batch.array) {
         // TODO: Horribly inefficient. Need a new constructor.
-        // TODO: fromJSONString could fail; would need to return either
-        // InvalidDataReceivedException -> InvalidRequest or
-        // JSONException -> ParseError.
-        auto req = RPCRequest.fromJSONString(request.toJSON());
+        RPCRequest req;
+        try {
+            req = RPCRequest.fromJSONString(request.toJSON());
+        } catch (InvalidDataReceivedException ex) {
+            if ("id" in request) {
+                responses ~= RPCResponse(
+                        request["id"],
+                        StandardErrorCode.InvalidRequest,
+                        JSONValue(ex.msg))._data;
+            } // TODO: else... spec is silent.
+            continue;
+        } catch (JSONException ex) {
+            if ("id" in request) {
+                responses ~= RPCResponse(
+                        request["id"],
+                        StandardErrorCode.ParseError,
+                        JSONValue(ex.msg))._data;
+            } // TODO: else... spec is silent.
+            continue;
+        }
         if (req.isNotification) {
             executeMethod(req, api);
         } else {
