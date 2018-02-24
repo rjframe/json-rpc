@@ -65,25 +65,10 @@ void main() {
 }
 ```
 
-Current status:
-
-* This is currently usable but not stable/reliable (so, usable-ish).
+This is currently usable but may not be stable/reliable (so, usable-ish).
 
 Documentation is currently in the docs/ folder and is not rebuilt often; I'll
 host them properly it once the project is ready.
-
-## Non-conforming details
-
-* (tmp) The server doesn't construct error responses yet.
-
-## Future plans
-
-* The server should not throw exceptions; it should provide a hook to log errors,
-  and send an error response to the client.
-  transports will allow supporting alternative protocols (HTTP, etc.).
-* Need to support a function registry on the server, and runtime function lists
-  on the client. The client especially shouldn't be required to know its API at
-  compile-time.
 
 ## Testing
 
