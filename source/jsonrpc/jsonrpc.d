@@ -84,7 +84,7 @@ struct RPCRequest {
             InvalidArgumentException if the json string is not a JSON Object or
             array.
     */
-    this(T)(T id, string method, JSONValue params = JSONValue())
+    this(T = long)(T id, string method, JSONValue params = JSONValue())
             if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
     in {
         assert(method.length > 0);
@@ -734,7 +734,7 @@ class RPCClient(API, Transport = TCPTransport)
         );
         ---
     */
-    RPCResponse[] batch(BatchRequest[] requests ...) {
+    RPCResponse[long] batch(BatchRequest[] requests ...) {
         if (requests.length == 0) {
             raise!(InvalidArgumentException)
                     ("requests cannot be an empty array.");
@@ -752,21 +752,23 @@ class RPCClient(API, Transport = TCPTransport)
                         _nextId++, request.method, request.params)._data;
             }
         }
-        auto r = JSONValue(reqs);
-        _transport.send(r.toJSON());
+        auto batchReq = JSONValue(reqs);
+        _transport.send(batchReq.toJSON());
 
-        RPCResponse[] responses;
+        RPCResponse[long] responses;
         if (allAreNotifications) return responses;
 
         auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
         if (resps.type == JSON_TYPE.ARRAY) {
             foreach (resp; resps.array) {
-                responses ~= RPCResponse(resp);
+                auto r = RPCResponse(resp);
+                responses[r.id] = r;
             }
         } else {
             // Single non-array (error?) response due to a malformed or empty
             // batch.
-            responses ~= RPCResponse(resps);
+            auto resp = RPCResponse(resps);
+            responses[resp.id] = resp;
         }
         return responses;
     }
