@@ -1319,6 +1319,7 @@ version(unittest) {
         ulong retUlong(string s) { return ("abc and " ~ s).length; }
 
         int retInt(int i) { return i+1; }
+        float retFloat() { return 1.23; }
 
         void voidFunc() { voidFunc_called = true; }
         void void3params(int a, bool b, float c) { void3params_called = true; }
@@ -1374,6 +1375,14 @@ unittest {
     auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue(5)), api);
     assert(r2.id == 1);
     assert(r2.result.integer == 6);
+}
+
+@test("executeMethod returns floating-point values")
+unittest {
+    auto api = new MyAPI();
+
+    auto resp = executeMethod(RPCRequest(0, "retFloat"), api);
+    assert(resp.result.floating > 1.22 && resp.result.floating < 1.24);
 }
 
 @test("executeMethod returns boolean values")
