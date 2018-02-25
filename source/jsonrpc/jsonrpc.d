@@ -740,25 +740,49 @@ class RPCClient(API, Transport = TCPTransport)
                     ("requests cannot be an empty array.");
         }
 
+        RPCResponse[long] responses;
+        auto allAreNotifications = sendBatchRequest(requests);
+        if (! allAreNotifications) responses = receiveBatchResponse();
+        return responses;
+    }
+
+    private:
+
+    import std.typecons : Flag, Yes, No;
+
+    long _nextId;
+    Transport _transport;
+
+    /** Instantiate an RPCClient with the specified network transport.
+
+        This is designed to allow mock objects for testing.
+    */
+    this(Transport transport) {
+        _transport = transport;
+    }
+
+    Flag!"allAreNotifications" sendBatchRequest(BatchRequest[] requests) {
         JSONValue[] reqs;
-        bool allAreNotifications = true;
+        Flag!"allAreNotifications" allAreNotifications = Yes.allAreNotifications;
 
         foreach (request; requests) {
             if (request.isNotification) {
                 reqs ~= RPCRequest(request.method, request.params)._data;
             } else {
-                allAreNotifications = false;
+                allAreNotifications = No.allAreNotifications;
                 reqs ~= RPCRequest(
                         _nextId++, request.method, request.params)._data;
             }
         }
         auto batchReq = JSONValue(reqs);
         _transport.send(batchReq.toJSON());
+        return allAreNotifications;
+    }
 
+    RPCResponse[long] receiveBatchResponse() {
         RPCResponse[long] responses;
-        if (allAreNotifications) return responses;
-
         auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
+
         if (resps.type == JSON_TYPE.ARRAY) {
             foreach (resp; resps.array) {
                 auto r = RPCResponse(resp);
@@ -771,19 +795,6 @@ class RPCClient(API, Transport = TCPTransport)
             responses[resp.id] = resp;
         }
         return responses;
-    }
-
-    private:
-
-    long _nextId;
-    Transport _transport;
-
-    /** Instantiate an RPCClient with the specified network transport.
-
-        This is designed to allow mock objects for testing.
-    */
-    this(Transport transport) {
-        _transport = transport;
     }
 }
 
