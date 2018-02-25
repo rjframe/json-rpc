@@ -188,44 +188,8 @@ struct RPCRequest {
     /** Retrieve the method to execute on the RPC server. */
     @property string method() { return _data["method"].str; }
 
-    /** Specify the method to execute on the RPC server. */
-    @property void method(string val) { _data["method"] = val; }
-
     /** Retrieve the parameters that will be passed to the method. */
     @property JSONValue params() { return _data["params"]; }
-
-    /** Set the parameters to the remote method that will be called.
-
-        Params:
-            val =   A JSON Object or array. Other value types will be wrapped
-                    in an array (e.g., 3 becomes [3]).
-    */
-    @property void params(JSONValue val)
-    {
-        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
-                && val.type != JSON_TYPE.NULL) {
-            _data["params"] = JSONValue([val]);
-        } else _data["params"] = val;
-    }
-
-    /** Set the parameters to the remote method as a JSON string.
-
-        The string must be a JSON Object or array.
-
-        Params:
-            json =   A JSON string.
-
-        Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
-            array.
-
-            std.json.JSONException if the json string cannot be parsed.
-    */
-    @property void params(string json) in {
-        assert(json.length > 0);
-    } body {
-        params(json.parseJSON);
-    }
 
     package:
 
@@ -362,6 +326,20 @@ struct RPCRequest {
     }
 
     private:
+
+    /** Set the parameters to the remote method that will be called.
+
+        Params:
+            val =   A JSON Object or array. Other value types will be wrapped
+                    in an array (e.g., 3 becomes [3]).
+    */
+    @property void params(JSONValue val)
+    {
+        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
+                && val.type != JSON_TYPE.NULL) {
+            _data["params"] = JSONValue([val]);
+        } else _data["params"] = val;
+    }
 
     JSONValue _data;
     bool _isNotification = false;
