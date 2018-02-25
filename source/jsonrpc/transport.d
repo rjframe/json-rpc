@@ -60,7 +60,6 @@ struct TCPTransport {
         Params:
             data = The string data to send.
     */
-    // TODO: Take data as ubyte[]?
     size_t send(const char[] data) {
         ptrdiff_t bytesSent = 0;
         while (bytesSent < data.length) {
@@ -73,7 +72,6 @@ struct TCPTransport {
 
     /** Receive a single JSON object or array from the socket stream. */
     char[] receiveJSONObjectOrArray() {
-        // TODO: This assumes only ASCII characters.
         char[SocketBufSize] buf;
         char[] data;
         ptrdiff_t receivedBytes = 0;
@@ -217,7 +215,8 @@ unittest {
     interface I {}
     auto sock = new FakeSocket();
     auto transport = TCPTransport(sock);
-    enum val = cast(char[])`[{"id":23,"method":"func","params":[1,2,3]},
+    enum val = cast(char[])
+          `[{"id":23,"method":"func","params":[1,2,3]},
             {"id":24,"method":"func","params":[1,2,3]},
             {"id":25,"method":"func","params":[1,2,3]},
             {"method":"func","params":[1,2,3]},
