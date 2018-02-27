@@ -81,7 +81,7 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
+            InvalidArgument if the json string is not a JSON Object or
             array.
     */
     this(T = long)(T id, string method, JSONValue params = JSONValue())
@@ -106,7 +106,7 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
+            InvalidArgument if the json string is not a JSON Object or
             array.
     */
     this(string method, JSONValue params = JSONValue()) in {
@@ -136,17 +136,17 @@ struct RPCRequest {
             idType
 
         Throws:
-            TypeException if the underlying type of the ID is not the requested
+            IncorrectType if the underlying type of the ID is not the requested
             type.
 
-            TypeException if this request is a notification.
+            IncorrectType if this request is a notification.
     */
     @property auto id(T = long)() {
         if (this.isNotification) {
-            raise!(TypeException)("There is no ID in a notification.");
+            raise!(IncorrectType)("There is no ID in a notification.");
         }
         scope(failure) {
-            raise!(TypeException)("The ID is not of the specified type.");
+            raise!(IncorrectType)("The ID is not of the specified type.");
         }
         return unwrapValue!T(_data["id"]);
     }
@@ -157,7 +157,7 @@ struct RPCRequest {
 
         auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
         assert(req.id!string == "my_id");
-        assertThrown!TypeException(req.id!int);
+        assertThrown!IncorrectType(req.id!int);
     }
 
     @test("RPCRequest null id can be created and read.")
@@ -172,11 +172,11 @@ struct RPCRequest {
             id
 
         Throws:
-            TypeException if this request is a notification.
+            IncorrectType if this request is a notification.
     */
     @property JSON_TYPE idType() {
         if (this.isNotification) {
-            raise!(TypeException)("There is no ID in a notification.");
+            raise!(IncorrectType)("There is no ID in a notification.");
         }
         return _data["id"].type;
     }
@@ -199,7 +199,7 @@ struct RPCRequest {
             str =   The JSON string to parse.
 
         Throws:
-            InvalidDataReceivedException if the ID or method fields are missing.
+            InvalidDataReceived if the ID or method fields are missing.
 
             JSONException if the ID or method fields are an incorrect type. The
             ID must be integral (non-conformant to the JSON-RPC spec) and the
@@ -221,7 +221,7 @@ struct RPCRequest {
                 return RPCRequest(json["method"].str, json["params"]);
             }
         } else {
-            raise!(InvalidDataReceivedException, str)
+            raise!(InvalidDataReceived, str)
                 ("Request is missing 'jsonrpc', 'id', and/or 'method' fields.");
             assert(0);
         }
@@ -262,11 +262,11 @@ struct RPCRequest {
     unittest {
         import std.exception : assertThrown;
 
-        assertThrown!InvalidDataReceivedException(
+        assertThrown!InvalidDataReceived(
                 RPCRequest.fromJSONString(
                     `{"id": 0, "method": "func", "params": [0, 1]}`));
 
-        assertThrown!InvalidDataReceivedException(
+        assertThrown!InvalidDataReceived(
                 RPCRequest.fromJSONString(
                     `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`));
 
@@ -288,7 +288,7 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidArgumentException if the json string is not a JSON Object or
+            InvalidArgument if the json string is not a JSON Object or
             array.
 
             std.json.JSONException if the json string cannot be parsed.
@@ -346,7 +346,7 @@ struct RPCResponse {
         the underlying type, use idType to query for it.
 
         Throws:
-            TypeException if the underlying type of the ID is not the requested
+            IncorrectType if the underlying type of the ID is not the requested
             type.
 
         See_Also:
@@ -354,7 +354,7 @@ struct RPCResponse {
     */
     @property T id(T = long)() {
         scope(failure) {
-            raise!(TypeException)("The ID is not of the specified type.");
+            raise!(IncorrectType)("The ID is not of the specified type.");
         }
         return unwrapValue!T(_data["id"]);
     }
@@ -365,7 +365,7 @@ struct RPCResponse {
 
         auto resp = RPCResponse("my_id", JSONValue(["result"]));
         assert(resp.id!string == "my_id");
-        assertThrown!TypeException(resp.id!int);
+        assertThrown!IncorrectType(resp.id!int);
 
         auto resp2 = RPCResponse(null, JSONValue(["result"]));
         assert(resp.id!(typeof(null)) == null);
@@ -441,7 +441,7 @@ struct RPCResponse {
         Throws:
             std.json.JSONException if the string cannot be parsed as JSON.
 
-            InvalidDataReceivedException if the 'id' or 'result' field is missing.
+            InvalidDataReceived if the 'id' or 'result' field is missing.
     */
     static package RPCResponse fromJSONString(const char[] str) {
         auto json = str.parseJSON;
@@ -559,9 +559,9 @@ class RPCClient(API, Transport = TCPTransport)
             The return value of the function call.
 
         Throws:
-            InvalidArgumentException if the argument types do not match the
+            InvalidArgument if the argument types do not match the
             remote interface.
-            RPCErrorException if the server returns an error response. Inspect
+            RPCErrorResponse if the server returns an error response. Inspect
             the exception payload for details.
 
         Example:
@@ -583,8 +583,8 @@ class RPCClient(API, Transport = TCPTransport)
     auto ref opDispatch(string apiFunc, ARGS...)(ARGS args) {
         import std.traits;
         static if (! hasMember!(API, apiFunc)) {
-            raise!(InvalidArgumentException!(args)
-                    ("Argument does not match the remote function interface."));
+            raise!(InvalidArgument, args)
+                    ("Argument does not match the remote function interface.");
         }
 
         import std.conv : text;
@@ -609,7 +609,7 @@ class RPCClient(API, Transport = TCPTransport)
         // TODO: Need to reconstruct arrays and AAs too.
         auto response = call(apiFunc, jsonArgs);
         if (response.hasError()) {
-            raise!(RPCErrorException, response)
+            raise!(RPCErrorResponse, response)
                     ("Server error: " ~ response.error["message"].str);
         }
 
@@ -720,8 +720,7 @@ class RPCClient(API, Transport = TCPTransport)
     */
     RPCResponse[long] batch(BatchRequest[] requests ...) {
         if (requests.length == 0) {
-            raise!(InvalidArgumentException)
-                    ("requests cannot be an empty array.");
+            raise!(InvalidArgument)("requests cannot be an empty array.");
         }
 
         RPCResponse[long] responses;
@@ -990,7 +989,7 @@ private:
 char[] receiveRequest(Transport)(Transport transport) {
     try {
         return transport.receiveJSONObjectOrArray();
-    } catch (InvalidDataReceivedException ex) {
+    } catch (InvalidDataReceived ex) {
         transport.send(
                 RPCResponse(
                     null,
@@ -1050,11 +1049,11 @@ void executeBatch(API, Transport)
     JSONValue[] responses;
     // TODO: Could parallelize these. Probably use constructor flag(?)
     foreach (request; batch.array) {
-        // TODO: Horribly inefficient. Need a new constructor.
         RPCRequest req;
         try {
+            // TODO: Horribly inefficient. Need a new constructor.
             req = RPCRequest.fromJSONString(request.toJSON());
-        } catch (InvalidDataReceivedException ex) {
+        } catch (InvalidDataReceived ex) {
             if ("id" in request) {
                 responses ~= RPCResponse(
                         request["id"],
@@ -1259,12 +1258,11 @@ auto unwrapValue(T)(JSONValue value) {
     } else static if (isBoolean!T) {
         if (value.type == JSON_TYPE.TRUE) return true;
         if (value.type == JSON_TYPE.FALSE) return false;
-        raise!(InvalidArgumentException, value)("Expected a boolean value.");
+        raise!(InvalidArgument, value)("Expected a boolean value.");
     } else static if (is(T == typeof(null))) {
         return null;
     } else {
-        raise!(InvalidArgumentException, value)
-                ("Non-scalar value cannot be unwrapped.");
+        raise!(InvalidArgument, value)("Non-scalar value cannot be unwrapped.");
     }
     assert(0);
 }

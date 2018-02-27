@@ -90,7 +90,7 @@ struct TCPTransport {
             startBrace = '[';
             endBrace = ']';
         } else {
-            raise!(InvalidDataReceivedException)
+            raise!(InvalidDataReceived, data)
                     ("Expected to receive a JSON object or array.");
         }
 
@@ -236,8 +236,7 @@ unittest {
     enum val = cast(char[])`"id":23,"method":"func","params":[1,2,3]}`;
 
     sock._receiveReturnValue = val;
-    assertThrown!InvalidDataReceivedException(
-            transport.receiveJSONObjectOrArray());
+    assertThrown!InvalidDataReceived(transport.receiveJSONObjectOrArray());
 }
 
 version(unittest) {

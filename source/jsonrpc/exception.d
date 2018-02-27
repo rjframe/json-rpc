@@ -1,43 +1,34 @@
-/** Exception base class inspired by Adam Ruppe's exception.d */
+/** Exception base class inspired by Adam Ruppe's exception.d
+
+    Error messages include the names and values of relevant data, but no
+    further introspection capabilities.
+*/
 module jsonrpc.exception;
 
 // I cannot define an exception within the unittest scope for testing/examples.
 ///
 unittest {
-    /* Where InvalidArgummentException is defined as:
-    class InvalidArgumentException : Exception {
+    /* Where InvalidArgumment is defined as:
+    class InvalidArgument : Exception {
         this() { super(""); }
     }
     */
 
     void func(bool one, bool two) {
         if (one == two) {
-            raise!(InvalidArgumentException, one, two)
-                    ("The values shouldn't match!");
+            raise!(InvalidArgument, one, two)("The values shouldn't match!");
         }
     }
     func(false, true);
 }
 
-/** Raised when attempting to assign parameters other than an array or
-    JSON Object to a Request.
-*/
-class InvalidParameterException : Exception {
-    this() { super(""); }
-}
-
 /** Raised when invalid data is passed as an argument to a function. */
-class InvalidArgumentException : Exception {
+class InvalidArgument : Exception {
     this() { super(""); }
 }
 
 /** Raised when invalid data is received by the client or server. */
-class InvalidDataReceivedException : Exception {
-    this() { super(""); }
-}
-
-/** Raised when data did not send properly. */
-class FailedToSendDataException : Exception {
+class InvalidDataReceived : Exception {
     this() { super(""); }
 }
 
@@ -49,14 +40,14 @@ class ConnectionException : Exception {
 /** Raised when a function call via RPCClient.opDispatch receives an error
     response.
 */
-class RPCErrorException : Exception {
+class RPCErrorResponse : Exception {
     this() { super(""); }
 }
 
 /** Raised when attempting to access a JSONValue via a different type than the
     underlying type.
 */
-class TypeException : Exception {
+class IncorrectType : Exception {
     this() { super(""); }
 }
 
