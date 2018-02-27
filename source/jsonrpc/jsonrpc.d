@@ -299,22 +299,6 @@ struct RPCRequest {
         this(id, method, params.parseJSON);
     }
 
-    @test("Test RPCRequest constructors.")
-    unittest {
-        auto req1 = RPCRequest(1, "some_method", `{ "arg1": "value1" }`);
-        auto req2 = RPCRequest(2, "some_method", `["abc", "def"]`);
-        auto req3 = RPCRequest(2, "some_method", JSONValue(123));
-
-        auto json = JSONValue([1, 2, 3]);
-        auto req4 = RPCRequest(3, "some_method", json);
-        auto req5 = RPCRequest(4, "some_method");
-
-        auto req6 = RPCRequest("id", "some_method", json);
-        auto req7 = RPCRequest(null, "some_method", json);
-
-        auto note = RPCRequest("some method", json);
-    }
-
     /** Convert the RPCRequest to a JSON string to pass to the server.
 
         Params:
