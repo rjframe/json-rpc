@@ -472,7 +472,6 @@ struct RPCResponse {
         assert(res.result.integer == 0, "Incorrect result.");
     }
 
-    // Note/TODO: Only one of result, error will be present in the response.
     JSONValue _data;
 
     private:
@@ -1332,9 +1331,12 @@ unittest {
     auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "void3params")
-            (RPCRequest(0, "void3params",
+            (RPCRequest(
+                0,
+                "void3params",
                 JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
-                api);
+            api);
+
     auto r2 = execRPCMethod!(MyAPI, "voidArray")
             (RPCRequest(1, "voidArray", JSONValue([1, 2])), api);
     auto r3 = execRPCMethod!(MyAPI, "voidFunc")
@@ -1362,8 +1364,8 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest(0, "retUlong",
-            JSONValue("some string")), api);
+    auto r1 = executeMethod(
+            RPCRequest(0, "retUlong", JSONValue("some string")), api);
     assert(r1.id == 0);
     assert(r1.result.unwrapValue!ulong == 19);
 
@@ -1427,7 +1429,9 @@ unittest {
     auto r1 = executeMethod(RPCRequest(0, "noFunctionHere"), api);
 
     assert(r1.id!long == 0);
-    assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound, "Wrong error.");
+    assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
+            "Wrong error.");
+
     assert(r1.error["data"]["method"].str == "noFunctionHere",
             "Did not include method.");
 }
@@ -1437,15 +1441,10 @@ unittest {
     auto api = new MyAPI();
 
     auto req = RPCRequest(0, "retTrue");
-    req._data["id"] = JSONValue([1,2]);
+    req._data["id"] = JSONValue([1, 2]);
     auto resp = executeMethod(req, api);
 
-    import std.stdio;
-    writeln(resp);
-
-    // The ID is not accessible outside this package, but does need to be
-    // correct.
-    assert(resp._data["id"] == JSONValue([1,2]));
+    assert(resp._data["id"] == JSONValue([1, 2]));
     assert(resp.error["code"].integer == StandardErrorCode.InvalidRequest,
             "Incorrect error.");
 }
@@ -1524,6 +1523,7 @@ unittest {
             batchReq("func1", JSONValue(123), Yes.notify)
     );
 
+    assert(responses.length == 3);
     assert(responses[0].result == JSONValue(null), "Incorrect [0] result");
     assert(responses[1].result == JSONValue(123), "Incorrect [1] result");
     assert(responses[2].result == JSONValue(0), "Incorrect [2] result");

@@ -198,7 +198,7 @@ struct TCPListener(API) {
 }
 
 
-@test("Can receive a JSON object")
+@test("receiveJSONObjectOrArray can receive a JSON object")
 unittest {
     interface I {}
     auto sock = new FakeSocket();
@@ -210,7 +210,7 @@ unittest {
     assert(ret == val);
 }
 
-@test("Can receive a JSON array")
+@test("receiveJSONObjectOrArray can receive a JSON array")
 unittest {
     interface I {}
     auto sock = new FakeSocket();
@@ -227,7 +227,7 @@ unittest {
     assert(ret == val);
 }
 
-@test("receiveJSONObjectOrArray if not given an array or object")
+@test("receiveJSONObjectOrArray throws an exception if not given an array or object")
 unittest {
     import std.exception : assertThrown;
     interface I {}
@@ -282,7 +282,7 @@ version(unittest) {
             return ret;
         }
 
-        @test("FakeSocket.receive")
+        @test("FakeSocket.receive allows injecting 'received' characters.")
         unittest {
             auto s = new FakeSocket;
             char[] buf = new char[](SocketBufSize);
