@@ -70,16 +70,18 @@ struct TCPTransport {
         return bytesSent;
     }
 
-    /** Receive a single JSON object or array from the socket stream. */
-    char[] receiveJSONObjectOrArray() {
+    char[] receiveData() {
         char[SocketBufSize] buf;
-        char[] data;
         ptrdiff_t receivedBytes = 0;
 
         receivedBytes = _socket.receive(buf);
-        if (receivedBytes <= 0) return data;
+        if (receivedBytes <= 0) return [];
+        return buf[0..receivedBytes].dup;
+    }
 
-        data = buf[0..receivedBytes].dup;
+    /** Receive a single JSON object or array from the socket stream. */
+    char[] receiveJSONObjectOrArray() {
+        auto data = receiveData();
 
         char startBrace;
         char endBrace;
@@ -97,23 +99,17 @@ struct TCPTransport {
         // Count the braces we receive. If we don't have a full object/array,
         // receive until we do.
         int braceCount = 0;
-        size_t totalLoc = 0;
+        size_t loc = 0;
         while(true) {
-            size_t loc = 0;
-            do {
-                if (data[totalLoc] == startBrace) ++braceCount;
-                else if (data[totalLoc] == endBrace) --braceCount;
-                ++loc;
-                ++totalLoc;
-            } while (loc < receivedBytes);
+            for (; loc < data.length; ++loc) {
+                if (data[loc] == startBrace) ++braceCount;
+                else if (data[loc] == endBrace) --braceCount;
+            }
 
             // If we receive an incomplete object, get more data and repeat as
             // needed.
             if (braceCount > 0) {
-                receivedBytes = _socket.receive(buf);
-                if (receivedBytes > 0) {
-                    data ~= buf[0..receivedBytes].dup;
-                }
+                data ~= receiveData();
             } else return data;
         }
     }
@@ -239,6 +235,23 @@ unittest {
     assertThrown!InvalidDataReceived(transport.receiveJSONObjectOrArray());
 }
 
+@test("receiveJSONObjectOrArray receives a full object when its length exceeds SocketBufSize")
+unittest {
+    import std.array : array;
+    import std.range : repeat, takeExactly;
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport(sock);
+
+    // This gives us a length of SocketBufSize+8.
+    enum key = 'a'.repeat().takeExactly(SocketBufSize/2).array;
+    enum val = 'b'.repeat().takeExactly(SocketBufSize/2).array;
+    auto sockReturn = cast(char[]) (`{"` ~ key ~ `": "` ~ val ~ `"}`);
+
+    sock._receiveReturnValue = sockReturn;
+    auto ret = transport.receiveJSONObjectOrArray();
+    assert(cast(string) ret == sockReturn);
+}
+
 version(unittest) {
     class FakeSocket : Socket {
         private bool _blocking;
@@ -300,9 +313,10 @@ version(unittest) {
         }
 
         private @trusted ptrdiff_t fillBuffer(char* ptr, size_t length) {
+            import std.algorithm.comparison : min;
             char[] p = ptr[0..length];
             ptrdiff_t cnt;
-            for (cnt = 0; cnt < receiveReturnValue.length; ++cnt) {
+            for (cnt = 0; cnt < min(length, receiveReturnValue.length); ++cnt) {
                 ptr[cnt] = receiveReturnValue[cnt];
             }
             return cnt;
