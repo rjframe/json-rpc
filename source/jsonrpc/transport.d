@@ -208,6 +208,20 @@ struct TCPListener(API) {
     Socket _socket;
 }
 
+version(Have_vibed) {
+    struct VibeTCPTransport {
+    }
+
+    struct VibeTCPListener(API) {
+    }
+
+    struct VibeWebSocketTransport {
+    }
+
+    struct VibeWebSocketListener(API) {
+    }
+}
+
 version(unittest) @system:
 
 @test("receiveJSONObjectOrArray can receive a JSON object")
@@ -278,7 +292,7 @@ version(unittest) {
 
         private char[] _lastDataSent;
 
-        @property receiveReturnValue(char[] s) {
+        @property receiveReturnValue(inout char[] s) {
             _receiveReturnValue = cast(char[])s;
         }
 

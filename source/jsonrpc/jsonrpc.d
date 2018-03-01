@@ -79,22 +79,12 @@ struct RPCRequest {
             method =    The name of the remote method to call.
             params =    A JSON string containing the method arguments as a JSON
                         Object or array.
-
-        Throws:
-            InvalidArgument if the json string is not a JSON Object, array or
-            JSONValue(null).
     */
     this(T = long)(T id, string method, JSONValue params = JSONValue())
             if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
     in {
         assert(method.length > 0);
     } body {
-        enforce!(InvalidArgument, params)
-                (params.type == JSON_TYPE.OBJECT
-                || params.type == JSON_TYPE.ARRAY
-                || params.type == JSON_TYPE.NULL,
-                     "Parameters must be null, an object, or array.");
-
         this._data["jsonrpc"] = "2.0";
         this._data["id"] = id;
         this._data["method"] = method;
@@ -110,20 +100,10 @@ struct RPCRequest {
             method =    The name of the remote method to call.
             params =    A JSON string containing the method arguments as a JSON
                         Object or array.
-
-        Throws:
-            InvalidArgument if the json string is not a JSON Object or
-            array.
     */
     this(string method, JSONValue params = JSONValue()) in {
         assert(method.length > 0);
     } body {
-        enforce!(InvalidArgument, params)
-                (params.type == JSON_TYPE.OBJECT
-                || params.type == JSON_TYPE.ARRAY
-                || params.type == JSON_TYPE.NULL,
-                     "Parameters must be null, an object, or array.");
-
         this._isNotification = true;
         this._data["jsonrpc"] = "2.0";
         this._data["method"] = method;
@@ -178,14 +158,6 @@ struct RPCRequest {
         assert(req.id!(typeof(null)) is null);
     }
 
-    @test("RPCRequest constructor throws if params is not an object or array")
-    unittest {
-        import std.exception : assertThrown;
-        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue(5)));
-        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue("str")));
-        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue(5.0)));
-    }
-
     /** Get the type of the underlying ID. There is no type for notifications.
 
         See_Also:
@@ -212,12 +184,15 @@ struct RPCRequest {
         Params:
             str =   The JSON string to parse.
 
+        Notes:
+            The ID, if present, must be integral; this is non-conformant to
+            the JSON-RPC specification.
+
         Throws:
             InvalidDataReceived if the ID or method fields are missing.
 
             JSONException if the ID or method fields are an incorrect type. The
-            ID must be integral (non-conformant to the JSON-RPC spec) and the
-            method must be a string.
+            ID must be integral and the method must be a string.
     */
     static RPCRequest fromJSONString(const char[] str) {
         auto json = str.parseJSON;
@@ -299,9 +274,6 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidArgument if the json string is not a JSON Object or
-            array.
-
             std.json.JSONException if the json string cannot be parsed.
     */
     this(T)(T id, string method, string params) in {
@@ -336,8 +308,10 @@ struct RPCRequest {
     */
     @property void params(JSONValue val)
     {
-        if (val.type != JSON_TYPE.OBJECT && val.type != JSON_TYPE.ARRAY
+        if (val.type != JSON_TYPE.OBJECT
+                && val.type != JSON_TYPE.ARRAY
                 && val.type != JSON_TYPE.NULL) {
+
             _data["params"] = JSONValue([val]);
         } else _data["params"] = val;
     }
