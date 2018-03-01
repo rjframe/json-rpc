@@ -26,7 +26,7 @@
     License:
         MIT
 */
-module jsonrpc.transport;
+module jsonrpc.transport; @safe:
 
 import std.socket;
 import jsonrpc.exception;
@@ -208,6 +208,7 @@ struct TCPListener(API) {
     Socket _socket;
 }
 
+version(unittest) @system:
 
 @test("receiveJSONObjectOrArray can receive a JSON object")
 unittest {
@@ -277,7 +278,7 @@ version(unittest) {
 
         private char[] _lastDataSent;
 
-        @property receiveReturnValue(string s) {
+        @property receiveReturnValue(char[] s) {
             _receiveReturnValue = cast(char[])s;
         }
 

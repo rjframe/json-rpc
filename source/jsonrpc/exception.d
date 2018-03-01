@@ -3,7 +3,7 @@
     Error messages include the names and values of relevant data, but no
     further introspection capabilities.
 */
-module jsonrpc.exception;
+module jsonrpc.exception; @safe:
 
 // I cannot define an exception within the unittest scope for testing/examples.
 ///
