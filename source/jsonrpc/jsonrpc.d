@@ -81,14 +81,20 @@ struct RPCRequest {
                         Object or array.
 
         Throws:
-            InvalidArgument if the json string is not a JSON Object or
-            array.
+            InvalidArgument if the json string is not a JSON Object, array or
+            JSONValue(null).
     */
     this(T = long)(T id, string method, JSONValue params = JSONValue())
             if (isNumeric!T || isSomeString!T || is(T : typeof(null)))
     in {
         assert(method.length > 0);
     } body {
+        enforce!(InvalidArgument, params)
+                (params.type == JSON_TYPE.OBJECT
+                || params.type == JSON_TYPE.ARRAY
+                || params.type == JSON_TYPE.NULL,
+                     "Parameters must be null, an object, or array.");
+
         this._data["jsonrpc"] = "2.0";
         this._data["id"] = id;
         this._data["method"] = method;
@@ -112,6 +118,12 @@ struct RPCRequest {
     this(string method, JSONValue params = JSONValue()) in {
         assert(method.length > 0);
     } body {
+        enforce!(InvalidArgument, params)
+                (params.type == JSON_TYPE.OBJECT
+                || params.type == JSON_TYPE.ARRAY
+                || params.type == JSON_TYPE.NULL,
+                     "Parameters must be null, an object, or array.");
+
         this._isNotification = true;
         this._data["jsonrpc"] = "2.0";
         this._data["method"] = method;
@@ -166,6 +178,14 @@ struct RPCRequest {
         assert(req.id!(typeof(null)) is null);
     }
 
+    @test("RPCRequest constructor throws if params is not an object or array")
+    unittest {
+        import std.exception : assertThrown;
+        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue(5)));
+        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue("str")));
+        assertThrown!InvalidArgument(RPCRequest(0, "func", JSONValue(5.0)));
+    }
+
     /** Get the type of the underlying ID. There is no type for notifications.
 
         See_Also:
@@ -207,23 +227,20 @@ struct RPCRequest {
     */
     static RPCRequest fromJSONString(const char[] str) {
         auto json = str.parseJSON;
-        if (json.type != JSON_TYPE.NULL
-                && "method" in json
-                && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
-            if ("params" !in json) json["params"] = JSONValue();
+        enforce!(InvalidDataReceived, str)
+                (json.type != JSON_TYPE.NULL
+                     && "method" in json
+                     && "jsonrpc" in json && json["jsonrpc"].str == "2.0",
+                "Request is missing 'jsonrpc', 'id', and/or 'method' fields.");
 
-            if ("id" in json) {
-                return RPCRequest(
-                        json["id"].integer,
-                        json["method"].str,
-                        json["params"]);
-            } else {
-                return RPCRequest(json["method"].str, json["params"]);
-            }
+        if ("params" !in json) json["params"] = JSONValue();
+        if ("id" in json) {
+            return RPCRequest(
+                    json["id"].integer,
+                    json["method"].str,
+                    json["params"]);
         } else {
-            raise!(InvalidDataReceived, str)
-                ("Request is missing 'jsonrpc', 'id', and/or 'method' fields.");
-            assert(0);
+            return RPCRequest(json["method"].str, json["params"]);
         }
     }
 
@@ -422,9 +439,9 @@ struct RPCResponse {
             T = The type of the response ID.
 
         Params:
-            id =    The ID of this response. This matches the relevant request.
-            error = The code of the standard error to send.
-            data =  Any additional data to add to the error response.
+            id =      The ID of this response. This matches the relevant request.
+            error =   The code of the standard error to send.
+            errData = Any additional data to add to the error response.
     */
     this(T)(T id, StandardErrorCode error, JSONValue errData = JSONValue()) {
         _data["jsonrpc"] = "2.0";
@@ -436,7 +453,7 @@ struct RPCResponse {
     /** Construct an RPCResponse from a JSON string.
 
         Params:
-            str =   The string to convert to an RPCResponse object.
+            str = The string to convert to an RPCResponse object.
 
         Throws:
             std.json.JSONException if the string cannot be parsed as JSON.
@@ -1356,7 +1373,7 @@ unittest {
     assert(r1 == true);
 
     auto r2 = execRPCMethod!(MyAPI, "retUlong")
-            (RPCRequest(1, "retUlong", JSONValue("some string")), api);
+            (RPCRequest(1, "retUlong", JSONValue(["some string"])), api);
     assert(r2 == 19);
 }
 
@@ -1365,11 +1382,11 @@ unittest {
     auto api = new MyAPI();
 
     auto r1 = executeMethod(
-            RPCRequest(0, "retUlong", JSONValue("some string")), api);
+            RPCRequest(0, "retUlong", JSONValue(["some string"])), api);
     assert(r1.id == 0);
     assert(r1.result.unwrapValue!ulong == 19);
 
-    auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue(5)), api);
+    auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue([5])), api);
     assert(r2.id == 1);
     assert(r2.result.integer == 6);
 }
@@ -1419,7 +1436,7 @@ unittest {
     auto api = new MyAPI();
 
     auto ret = executeMethod(
-            RPCRequest("áðý", "øbæårößΓαζ", JSONValue("éçφωτz")), api);
+            RPCRequest("áðý", "øbæårößΓαζ", JSONValue(["éçφωτz"])), api);
     assert(ret.result == JSONValue("éçφωτzâいはろшь ж๏เ"));
 }
 
@@ -1477,7 +1494,7 @@ unittest {
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":null}`;
-    auto resp2 = client.call("func", JSONValue(3));
+    auto resp2 = client.call("func", JSONValue([3]));
 }
 
 @test("[DOCTEST] RPCClient example: notify")
@@ -1493,7 +1510,7 @@ unittest {
     assert(sock.lastDataSent ==
             RPCRequest("func", `{"val":3}`.parseJSON)._data.toJSON);
 
-    client.notify("func", JSONValue(3));
+    client.notify("func", JSONValue([3]));
     assert(sock.lastDataSent ==
             RPCRequest("func", `[3]`.parseJSON)._data.toJSON);
 }
@@ -1516,11 +1533,11 @@ unittest {
 
     import std.typecons : Yes;
     auto responses = client.batch(
-            batchReq("func1", JSONValue(50)),
-            batchReq("func1", JSONValue(-1), Yes.notify),
-            batchReq("func2", JSONValue("hello")),
+            batchReq("func1", JSONValue([50])),
+            batchReq("func1", JSONValue([-1]), Yes.notify),
+            batchReq("func2", JSONValue(["hello"])),
             batchReq("func3", JSONValue()),
-            batchReq("func1", JSONValue(123), Yes.notify)
+            batchReq("func1", JSONValue([123]), Yes.notify)
     );
 
     assert(responses.length == 3);

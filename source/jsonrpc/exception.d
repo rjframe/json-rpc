@@ -85,3 +85,22 @@ void raise(ExceptionClass, T...)(
     }
     throw new Except(msg, file, line);
 }
+
+/** Raise the specified exception of the provided expression evaluates to false.
+
+    Behavior is similar to $(D_INLINECODE assert() ) but throws an exception on
+    failure.
+
+    Example:
+    ---
+    enforce!(OutOfRange, myvar)(myvar > 0, "myvar must be greater than 0");
+    ---
+*/
+auto enforce(ExceptionClass, T...)(
+        bool val,
+        string msg = "",
+        string file = __FILE__,
+        size_t line = __LINE__) {
+    if (!val) raise!(ExceptionClass, T)(msg, file, line);
+    return val;
+}
