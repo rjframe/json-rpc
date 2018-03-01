@@ -36,6 +36,54 @@ else private struct test { string name; }
 
 private enum SocketBufSize = 4096;
 
+/** Receive a JSON object or array. Mixin template for transport implementations.
+
+    If your transport provides a `receiveData` function defined as
+    $(D_INLINECODE char[] receiveData(); ) the receiveJSONObjectOrArray will
+    call it and return the first complete JSON object or array from the char
+    stream. Any trailing data is thrown away.
+*/
+mixin template ReceiveJSON() {
+    /** Receive a single JSON object or array from the socket stream.
+
+        Any trailing data is thrown away.
+    */
+    char[] receiveJSONObjectOrArray() {
+        auto data = receiveData();
+
+        char startBrace;
+        char endBrace;
+        if (data[0] == '{') {
+            startBrace = '{';
+            endBrace = '}';
+        } else if (data[0] == '[') {
+            startBrace = '[';
+            endBrace = ']';
+        } else {
+            raise!(InvalidDataReceived, data)
+                    ("Expected to receive a JSON object or array.");
+        }
+
+        // Count the braces we receive. If we don't have a full object/array,
+        // receive until we do.
+        int braceCount = 0;
+        size_t loc = 0;
+        while(true) {
+            for (; loc < data.length; ++loc) {
+                if (data[loc] == startBrace) ++braceCount;
+                else if (data[loc] == endBrace) --braceCount;
+            }
+
+            // If we receive an incomplete object, get more data and repeat as
+            // needed.
+            if (braceCount > 0) {
+                data ~= receiveData();
+            } else return data;
+        }
+    }
+}
+
+
 /** Manage TCP transport connection details and tasks. */
 struct TCPTransport {
     package:
@@ -79,40 +127,7 @@ struct TCPTransport {
         return buf[0..receivedBytes].dup;
     }
 
-    /** Receive a single JSON object or array from the socket stream. */
-    char[] receiveJSONObjectOrArray() {
-        auto data = receiveData();
-
-        char startBrace;
-        char endBrace;
-        if (data[0] == '{') {
-            startBrace = '{';
-            endBrace = '}';
-        } else if (data[0] == '[') {
-            startBrace = '[';
-            endBrace = ']';
-        } else {
-            raise!(InvalidDataReceived, data)
-                    ("Expected to receive a JSON object or array.");
-        }
-
-        // Count the braces we receive. If we don't have a full object/array,
-        // receive until we do.
-        int braceCount = 0;
-        size_t loc = 0;
-        while(true) {
-            for (; loc < data.length; ++loc) {
-                if (data[loc] == startBrace) ++braceCount;
-                else if (data[loc] == endBrace) --braceCount;
-            }
-
-            // If we receive an incomplete object, get more data and repeat as
-            // needed.
-            if (braceCount > 0) {
-                data ~= receiveData();
-            } else return data;
-        }
-    }
+    mixin ReceiveJSON;
 
     /** Close the transport's underlying socket. */
     void close() {
