@@ -205,12 +205,6 @@ struct RPCRequest {
     */
     @property bool isNotification() { return _isNotification; }
 
-    /** Retrieve the method to execute on the RPC server. */
-    @property string method() { return _data["method"].str; }
-
-    /** Retrieve the parameters that will be passed to the method. */
-    @property JSONValue params() { return _data["params"]; }
-
     package:
 
     /** Parse a JSON string into an RPCRequest object.
@@ -327,6 +321,12 @@ struct RPCRequest {
     }
 
     private:
+
+    /** Retrieve the method to execute on the RPC server. */
+    @property string method() { return _data["method"].str; }
+
+    /** Retrieve the parameters that will be passed to the method. */
+    @property JSONValue params() { return _data["params"]; }
 
     /** Set the parameters to the remote method that will be called.
 
