@@ -434,15 +434,15 @@ struct RPCResponse {
 
         Throws:
             std.json.JSONException if the string cannot be parsed as JSON.
-
-            InvalidDataReceived if the 'id' or 'result' field is missing.
     */
-    static package RPCResponse fromJSONString(const char[] str) {
+    static package RPCResponse fromJSONString(const char[] str) in {
+        assert(str.length > 0, "Parsed JSON cannot be null.");
+    } body {
         auto json = str.parseJSON;
-        if (json.type != JSON_TYPE.NULL
-                && "id" in json
+        if ("id" in json
                 && ("result" in json).xor("error" in json)
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
+
             return RPCResponse(json);
         } else {
             return RPCResponse(json["id"].integer, StandardErrorCode.InvalidRequest);
