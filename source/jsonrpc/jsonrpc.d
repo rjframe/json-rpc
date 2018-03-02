@@ -521,7 +521,7 @@ enum StandardErrorCode : int {
     ---
 */
 class RPCClient(API, Transport = TCPTransport)
-        if (is(API == interface) && is(Transport == struct)) {
+        if (is(API == interface) && isTransport!Transport) {
 
     /** Instantiate an RPCClient bound to the specified host.
 
@@ -858,7 +858,7 @@ auto batchReq(
     ---
 */
 class RPCServer(API, Listener = TCPListener!API)
-        if (is(API == class) && is(Listener == struct)) {
+        if (is(API == class) && isListener!(TCPListener(API))) {
 
     import std.socket;
 
@@ -932,7 +932,7 @@ class RPCServer(API, Listener = TCPListener!API)
         api       = An instantiated class containing the functions to execute.
 */
 void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
-        if (is(Transport == struct)) {
+        if (is(API == class) && isTransport!Transport) {
     while (transport.isAlive()) {
         char[] received = receiveRequest(transport);
         if (received.length == 0) continue;
@@ -962,7 +962,9 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         api =       An instance of the class or struct containing the function
                     to call.
 */
-RPCResponse executeMethod(API)(RPCRequest request, API api) {
+RPCResponse executeMethod(API)(RPCRequest request, API api)
+        if (is(API == class)) {
+
     import std.traits : isFunction;
     foreach(method; __traits(derivedMembers, API)) {
         mixin(
@@ -1076,7 +1078,7 @@ void executeBatch(API, Transport)
                         request["id"],
                         StandardErrorCode.InvalidRequest,
                         JSONValue(ex.msg))._data;
-            } // TODO: else... spec is silent.
+            } // TODO: else... spec is silent. Example uses null ID.
             continue;
         } catch (JSONException ex) {
             if ("id" in request) {
@@ -1084,7 +1086,7 @@ void executeBatch(API, Transport)
                         request["id"],
                         StandardErrorCode.ParseError,
                         JSONValue(ex.msg))._data;
-            } // TODO: else... spec is silent.
+            } // TODO: else... spec is silent. Example uses null ID.
             continue;
         }
         if (req.isNotification) {

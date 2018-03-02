@@ -29,12 +29,25 @@
 module jsonrpc.transport; @safe:
 
 import std.socket;
+import std.traits : ReturnType;
 import jsonrpc.exception;
 
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
 private enum SocketBufSize = 4096;
+
+enum bool isTransport(T) =
+        is(T == struct) &&
+        is(ReturnType!((T t) => t.send([])) == size_t) &&
+        is(ReturnType!((T t) => t.receiveJSONObjectOrArray) == char[]) &&
+        is(typeof((T t) => t.close)) &&
+        is(ReturnType!((T t) => t.isAlive) == bool);
+
+enum bool isListener(T) =
+        is(T == struct) &&
+        is(typeof((T t) => t.listen));
+
 
 /** Receive a JSON object or array. Mixin template for transport implementations.
 
@@ -86,6 +99,8 @@ mixin template ReceiveJSON() {
 
 /** Manage TCP transport connection details and tasks. */
 struct TCPTransport {
+    static assert(isTransport!TCPTransport);
+
     package:
 
     /** Instantiate a TCPTransport object.
@@ -159,6 +174,8 @@ struct TCPTransport {
         API = The class containing the methods for the server to execute.
 */
 struct TCPListener(API) {
+    static assert(isListener!(TCPListener!(API)));
+
     package:
 
     /** Instantiate a TCPListener object.
