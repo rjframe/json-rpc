@@ -353,15 +353,18 @@ struct RPCResponse {
         return unwrapValue!T(_data["id"]);
     }
 
-    @test("RPCResponse non-integral id can be created and read.")
+    @test("RPCResponse string id can be created and read.")
     unittest {
         import std.exception : assertThrown;
 
         auto resp = RPCResponse("my_id", JSONValue(["result"]));
         assert(resp.id!string == "my_id");
         assertThrown!IncorrectType(resp.id!int);
+    }
 
-        auto resp2 = RPCResponse(null, JSONValue(["result"]));
+    @test("RPCResponse null id can be created and read.")
+    unittest {
+        auto resp = RPCResponse(null, JSONValue(["result"]));
         assert(resp.id!(typeof(null)) == null);
     }
 
