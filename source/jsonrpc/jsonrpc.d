@@ -77,7 +77,7 @@ struct RPCRequest {
         Params:
             id =        The ID of the request.
             method =    The name of the remote method to call.
-            params =    A JSON string containing the method arguments as a JSON
+            params =    A JSONValue containing the method arguments as a JSON
                         Object or array.
     */
     this(T = long)(T id, string method, JSONValue params = JSONValue())
@@ -88,6 +88,29 @@ struct RPCRequest {
         this._data["jsonrpc"] = "2.0";
         this._data["id"] = id;
         this._data["method"] = method;
+        this.params = params;
+    }
+
+    /** Construct an RPCRequest with the specified remote method name and
+        arguments.
+
+        The value of the ID must be a string, a number, or null; null is not
+        recommended for use as an ID.
+
+        Params:
+            id =        A JSONValue containing a scalar ID of the request.
+            method =    The name of the remote method to call.
+            params =    A JSONValue containing the method arguments as a JSON
+                        Object or array.
+    */
+    this(JSONValue id, string method, JSONValue params) in {
+        assert(method.length > 0);
+        assert(id.type != JSON_TYPE.OBJECT);
+        assert(id.type != JSON_TYPE.ARRAY);
+    } body {
+        _data["id"] = id;
+        _data["method"] = method;
+        _data["jsonrpc"] = "2.0";
         this.params = params;
     }
 
@@ -205,7 +228,7 @@ struct RPCRequest {
         if ("params" !in json) json["params"] = JSONValue();
         if ("id" in json) {
             return RPCRequest(
-                    json["id"].integer,
+                    json["id"],
                     json["method"].str,
                     json["params"]);
         } else {
@@ -242,23 +265,6 @@ struct RPCRequest {
         assert(req.method == "func", "Incorrect method.");
         assert(req.params.array == [JSONValue(0), JSONValue(1)],
                 "Incorrect params.");
-    }
-
-    @test("RPCRequest.fromJSONString throws exception on invalid input")
-    unittest {
-        import std.exception : assertThrown;
-
-        assertThrown!InvalidDataReceived(
-                RPCRequest.fromJSONString(
-                    `{"id": 0, "method": "func", "params": [0, 1]}`));
-
-        assertThrown!InvalidDataReceived(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`));
-
-        assertThrown!JSONException(
-                RPCRequest.fromJSONString(
-                    `{"jsonrpc": "2.0", "id": "0", "method": "func", "params": [0, 1]}`));
     }
 
     /** Construct an RPCRequest with the specified remote method name and
@@ -637,6 +643,30 @@ class RPCClient(API, Transport = TCPTransport)
         auto req = RPCRequest(_nextId++, func, params);
 
         _transport.send(req.toJSONString());
+
+        auto respObj = _transport.receiveJSONObjectOrArray();
+        return RPCResponse.fromJSONString(respObj);
+    }
+
+    /** Send an RPCRequest object to the server.
+
+        Generally the only reason to use this overload is to send a request with
+        a non-integral ID.
+
+        Params:
+            request = The RPCRequest to send.
+
+        Example:
+        ---
+        interface MyAPI { bool my_func(int[] values); }
+
+        auto client = RPCClient!MyAPI("127.0.0.1", 54321);
+        auto req = RPCRequest("my_id", "my_func", [1, 2, 3]);
+        auto response = client.call(req);
+        ---
+    */
+    RPCResponse call(RPCRequest request) {
+        _transport.send(request.toJSONString());
 
         auto respObj = _transport.receiveJSONObjectOrArray();
         return RPCResponse.fromJSONString(respObj);
@@ -1464,11 +1494,24 @@ unittest {
     auto transport = TCPTransport(sock);
     auto client = new RPCClient!MyAPI(transport);
 
-    import std.json : JSONValue;
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":0,"result":null}`;
     auto resp = client.call("func", `{ "val": 3 }`.parseJSON);
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":1,"result":null}`;
     auto resp2 = client.call("func", JSONValue([3]));
+}
+
+@test("[DOCTEST] RPCClient example: call(RPCRequest) allows non-integral IDs")
+unittest {
+    interface MyAPI { bool my_func(int[] values); }
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport(sock);
+    auto client = new RPCClient!MyAPI(transport);
+
+    sock.receiveReturnValue = `{"jsonrpc":"2.0","id":"my_id","result":true}`;
+    auto req = RPCRequest("my_id", "my_func", JSONValue([1, 2, 3]));
+    auto response = client.call(req);
+
+    assert(unwrapValue!bool(response.result) == true);
 }
 
 @test("[DOCTEST] RPCClient example: notify")
