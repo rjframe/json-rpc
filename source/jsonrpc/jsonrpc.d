@@ -133,9 +133,6 @@ struct RPCRequest {
         this.params = params;
     }
 
-    /** Get the JSON-RPC protocol version. */
-    @property string protocolVersion() { return _data["jsonrpc"].str; }
-
     /** Get the ID of this request.
 
         If the ID is not of type long, it needs to be specified; if uncertain of
