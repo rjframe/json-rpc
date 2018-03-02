@@ -370,9 +370,6 @@ struct RPCResponse {
 
     @property JSON_TYPE idType() { return _data["id"].type; }
 
-    /** The JSON-RPC protocol version. */
-    @property string protocolVersion() { return _data["jsonrpc"].str; }
-
     // TODO: These are mutually exclusive; I shouldn't have properties for both
     // as valid accessors.
     @property JSONValue result() { return _data["result"]; }
