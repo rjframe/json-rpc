@@ -858,7 +858,7 @@ auto batchReq(
     ---
 */
 class RPCServer(API, Listener = TCPListener!API)
-        if (is(API == class) && isListener!(TCPListener(API))) {
+        if (is(API == class) && isListener!(Listener!API)) {
 
     import std.socket;
 
@@ -966,6 +966,8 @@ RPCResponse executeMethod(API)(RPCRequest request, API api)
         if (is(API == class)) {
 
     import std.traits : isFunction;
+    // TODO: Filter out @disable -d functions
+    // 2.079.0 introduces __traits(isDisabled)
     foreach(method; __traits(derivedMembers, API)) {
         mixin(
             "enum isMethodAPublicFunction =\n" ~

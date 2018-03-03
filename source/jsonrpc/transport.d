@@ -37,6 +37,7 @@ else private struct test { string name; }
 
 private enum SocketBufSize = 4096;
 
+/** Check whether the specified object is a valid transport for RPCClients. */
 enum bool isTransport(T) =
         is(T == struct) &&
         is(ReturnType!((T t) => t.send([])) == size_t) &&
@@ -44,9 +45,9 @@ enum bool isTransport(T) =
         is(typeof((T t) => t.close)) &&
         is(ReturnType!((T t) => t.isAlive) == bool);
 
+/** Check whether the specified object is a valid listener for RPCServers. */
 enum bool isListener(T) =
-        is(T == struct) &&
-        is(typeof((T t) => t.listen));
+        is(T == struct);
 
 
 /** Receive a JSON object or array. Mixin template for transport implementations.
@@ -133,15 +134,6 @@ struct TCPTransport {
         return bytesSent;
     }
 
-    char[] receiveData() {
-        char[SocketBufSize] buf;
-        ptrdiff_t receivedBytes = 0;
-
-        receivedBytes = _socket.receive(buf);
-        if (receivedBytes <= 0) return [];
-        return buf[0..receivedBytes].dup;
-    }
-
     mixin ReceiveJSON;
 
     /** Close the transport's underlying socket. */
@@ -158,6 +150,16 @@ struct TCPTransport {
     }
 
     private:
+
+    /** Receive incoming data. */
+    char[] receiveData() {
+        char[SocketBufSize] buf;
+        ptrdiff_t receivedBytes = 0;
+
+        receivedBytes = _socket.receive(buf);
+        if (receivedBytes <= 0) return [];
+        return buf[0..receivedBytes].dup;
+    }
 
     Socket _socket;
 
@@ -223,20 +225,6 @@ struct TCPListener(API) {
     private:
 
     Socket _socket;
-}
-
-version(Have_vibed) {
-    struct VibeTCPTransport {
-    }
-
-    struct VibeTCPListener(API) {
-    }
-
-    struct VibeWebSocketTransport {
-    }
-
-    struct VibeWebSocketListener(API) {
-    }
 }
 
 version(unittest) @system:
