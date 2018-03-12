@@ -57,15 +57,15 @@ else private struct test { string name; }
 
 /** An RPC request constructed by the client to send to the RPC server.
 
-    The RPCRequest contains the ID of the request, the method to call, and any
+    The Request contains the ID of the request, the method to call, and any
     parameters to pass to the method. You should not need to manually create an
-    RPCRequest object; the RPCClient will do this for you.
+    Request object; the RPCClient will do this for you.
 */
-struct RPCRequest {
+struct Request {
     import std.traits;
     import std.typecons : Flag, Yes, No;
 
-    /** Construct an RPCRequest with the specified remote method name and
+    /** Construct a Request with the specified remote method name and
         arguments.
 
         The ID must be a string, a number, or null; null is not recommended for
@@ -91,7 +91,7 @@ struct RPCRequest {
         this.params = params;
     }
 
-    /** Construct an RPCRequest with the specified remote method name and
+    /** Construct a Request with the specified remote method name and
         arguments.
 
         The value of the ID must be a string, a number, or null; null is not
@@ -163,18 +163,18 @@ struct RPCRequest {
         return unwrapValue!T(_data["id"]);
     }
 
-    @test("RPCRequest string id can be created and read.")
+    @test("Request string id can be created and read.")
     unittest {
         import std.exception : assertThrown;
 
-        auto req = RPCRequest("my_id", "func", JSONValue(["params"]));
+        auto req = Request("my_id", "func", JSONValue(["params"]));
         assert(req.id!string == "my_id");
         assertThrown!IncorrectType(req.id!int);
     }
 
-    @test("RPCRequest null id can be created and read.")
+    @test("Request null id can be created and read.")
     unittest {
-        auto req = RPCRequest(null, "func", JSONValue(["params"]));
+        auto req = Request(null, "func", JSONValue(["params"]));
         assert(req.id!(typeof(null)) is null);
     }
 
@@ -199,7 +199,7 @@ struct RPCRequest {
 
     package:
 
-    /** Parse a JSON string into an RPCRequest object.
+    /** Parse a JSON string into a Request object.
 
         Params:
             str =   The JSON string to parse.
@@ -214,7 +214,7 @@ struct RPCRequest {
             JSONException if the ID or method fields are an incorrect type. The
             ID must be integral and the method must be a string.
     */
-    static RPCRequest fromJSONString(const char[] str) {
+    static Request fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         enforce!(InvalidDataReceived, str)
                 (json.type != JSON_TYPE.NULL
@@ -224,19 +224,19 @@ struct RPCRequest {
 
         if ("params" !in json) json["params"] = JSONValue();
         if ("id" in json) {
-            return RPCRequest(
+            return Request(
                     json["id"],
                     json["method"].str,
                     json["params"]);
         } else {
-            return RPCRequest(json["method"].str, json["params"]);
+            return Request(json["method"].str, json["params"]);
         }
     }
 
-    @test("[DOCTEST]: RPCRequest.fromJSONString")
+    @test("[DOCTEST]: Request.fromJSONString")
     ///
     unittest {
-        auto req = RPCRequest.fromJSONString(
+        auto req = Request.fromJSONString(
                 `{"jsonrpc":"2.0","id":14,"method":"func","params":[0,1]}`);
 
         assert(req.id == 14);
@@ -244,9 +244,9 @@ struct RPCRequest {
         assert(req.params.array == [JSONValue(0), JSONValue(1)]);
     }
 
-    @test("RPCRequest.fromJSONString converts JSON to RPCRequest")
+    @test("Request.fromJSONString converts JSON to Request")
     unittest {
-        auto req = RPCRequest.fromJSONString(
+        auto req = Request.fromJSONString(
                 `{"jsonrpc": "2.0", "id": 0, "method": "func", "params": [0, 1]}`);
         assert(req.id == 0, "Incorrect ID.");
         assert(req.method == "func", "Incorrect method.");
@@ -254,9 +254,9 @@ struct RPCRequest {
                 "Incorrect params.");
     }
 
-    @test("RPCRequest.fromJSONString creates notifications")
+    @test("Request.fromJSONString creates notifications")
     unittest {
-        auto req = RPCRequest.fromJSONString(
+        auto req = Request.fromJSONString(
                 `{"jsonrpc": "2.0", "method": "func", "params": [0, 1]}`);
 
         assert(req.method == "func", "Incorrect method.");
@@ -264,7 +264,7 @@ struct RPCRequest {
                 "Incorrect params.");
     }
 
-    /** Construct an RPCRequest with the specified remote method name and
+    /** Construct a Request with the specified remote method name and
         arguments.
 
         Template_Parameters:
@@ -285,7 +285,7 @@ struct RPCRequest {
         this(id, method, params.parseJSON);
     }
 
-    /** Convert the RPCRequest to a JSON string to pass to the server.
+    /** Convert the Request to a JSON string to pass to the server.
 
         Params:
             prettyPrint = Yes to pretty-print the JSON output; No for efficient
@@ -333,8 +333,8 @@ struct RPCRequest {
     else writeln(response.result);
     ---
 */
-struct RPCResponse {
-    /** Get the id of the RPCResponse.
+struct Response {
+    /** Get the id of the Response.
 
         If the id is not of type long, it needs to be specified; if uncertain of
         the underlying type, use idType to query for it.
@@ -353,18 +353,18 @@ struct RPCResponse {
         return unwrapValue!T(_data["id"]);
     }
 
-    @test("RPCResponse string id can be created and read.")
+    @test("Response string id can be created and read.")
     unittest {
         import std.exception : assertThrown;
 
-        auto resp = RPCResponse("my_id", JSONValue(["result"]));
+        auto resp = Response("my_id", JSONValue(["result"]));
         assert(resp.id!string == "my_id");
         assertThrown!IncorrectType(resp.id!int);
     }
 
-    @test("RPCResponse null id can be created and read.")
+    @test("Response null id can be created and read.")
     unittest {
-        auto resp = RPCResponse(null, JSONValue(["result"]));
+        auto resp = Response(null, JSONValue(["result"]));
         assert(resp.id!(typeof(null)) == null);
     }
 
@@ -379,7 +379,7 @@ struct RPCResponse {
         return "error" in _data && !(_data["error"].isNull);
     }
 
-    /** Convert the RPCResponse to a JSON string to send to the client.
+    /** Convert the Response to a JSON string to send to the client.
 
         Params:
             prettyPrint = Yes to pretty-print the JSON output; No for efficient
@@ -393,7 +393,7 @@ struct RPCResponse {
 
     /** Construct a response to send to the client.
 
-        The id must be the same as the RPCRequest to which the server is
+        The id must be the same as the Request to which the server is
         responding, and can be numeric, string, or null.
 
         Template_Parameters:
@@ -427,15 +427,15 @@ struct RPCResponse {
         if (errData.type != JSON_TYPE.NULL) _data["error"]["data"] = errData;
     }
 
-    /** Construct an RPCResponse from a JSON string.
+    /** Construct an Response from a JSON string.
 
         Params:
-            str = The string to convert to an RPCResponse object.
+            str = The string to convert to an Response object.
 
         Throws:
             std.json.JSONException if the string cannot be parsed as JSON.
     */
-    static package RPCResponse fromJSONString(const char[] str) in {
+    static package Response fromJSONString(const char[] str) in {
         assert(str.length > 0, "Parsed JSON cannot be null.");
     } body {
         auto json = str.parseJSON;
@@ -443,24 +443,24 @@ struct RPCResponse {
                 && ("result" in json).xor("error" in json)
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
 
-            return RPCResponse(json);
+            return Response(json);
         } else {
-            return RPCResponse(json["id"].integer, StandardErrorCode.InvalidRequest);
+            return Response(json["id"].integer, StandardErrorCode.InvalidRequest);
         }
     }
 
-    @test("RPCResponse.fromJSONString returns an error on invalid request.")
+    @test("Response.fromJSONString returns an error on invalid request.")
     unittest {
-        auto resp = RPCResponse.fromJSONString(
+        auto resp = Response.fromJSONString(
                 `{"jsonrpc": "2.0", "id": 0, "params": [0, 1]}`);
         assert(resp.id == 0, "Incorrect ID.");
         assert(resp.error["code"] == JSONValue(StandardErrorCode.InvalidRequest),
                 "Incorrect error.");
     }
 
-    @test("RPCResponse.fromJSONString converts JSON to RPCResponse")
+    @test("Response.fromJSONString converts JSON to Response")
     unittest {
-        auto res = RPCResponse.fromJSONString(
+        auto res = Response.fromJSONString(
                 `{"jsonrpc": "2.0", "id": 0, "method": "func", "result": 0}`);
         assert(res.id == 0, "Incorrect ID.");
         assert(res.result.integer == 0, "Incorrect result.");
@@ -634,39 +634,39 @@ class RPCClient(API, Transport = TCPTransport)
         auto resp2 = client.call("func", JSONValue(3));
         ---
     */
-    RPCResponse call(string func, JSONValue params = JSONValue()) in {
+    Response call(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        auto req = RPCRequest(_nextId++, func, params);
+        auto req = Request(_nextId++, func, params);
 
         _transport.send(req.toJSONString());
 
         auto respObj = _transport.receiveJSONObjectOrArray();
-        return RPCResponse.fromJSONString(respObj);
+        return Response.fromJSONString(respObj);
     }
 
-    /** Send an RPCRequest object to the server.
+    /** Send a Request object to the server.
 
         Generally the only reason to use this overload is to send a request with
         a non-integral ID.
 
         Params:
-            request = The RPCRequest to send.
+            request = The Request to send.
 
         Example:
         ---
         interface MyAPI { bool my_func(int[] values); }
 
         auto client = RPCClient!MyAPI("127.0.0.1", 54321);
-        auto req = RPCRequest("my_id", "my_func", [1, 2, 3]);
+        auto req = Request("my_id", "my_func", [1, 2, 3]);
         auto response = client.call(req);
         ---
     */
-    RPCResponse call(RPCRequest request) {
+    Response call(Request request) {
         _transport.send(request.toJSONString());
 
         auto respObj = _transport.receiveJSONObjectOrArray();
-        return RPCResponse.fromJSONString(respObj);
+        return Response.fromJSONString(respObj);
     }
 
     /** Send a notification to the server.
@@ -698,7 +698,7 @@ class RPCClient(API, Transport = TCPTransport)
     void notify(string func, JSONValue params = JSONValue()) in {
         assert(func.length > 0);
     } body {
-        _transport.send(RPCRequest(func, params).toJSONString());
+        _transport.send(Request(func, params).toJSONString());
     }
 
     /** Execute a batch of function calls.
@@ -708,7 +708,7 @@ class RPCClient(API, Transport = TCPTransport)
                        `batchReq` function.
 
         Returns:
-            An array of RPCResponse objects, in the same order as the respective
+            An array of Response objects, in the same order as the respective
             request.
 
         Notes:
@@ -735,12 +735,12 @@ class RPCClient(API, Transport = TCPTransport)
         );
         ---
     */
-    RPCResponse[long] batch(BatchRequest[] requests ...) {
+    Response[long] batch(BatchRequest[] requests ...) {
         if (requests.length == 0) {
             raise!(InvalidArgument)("requests cannot be an empty array.");
         }
 
-        RPCResponse[long] responses;
+        Response[long] responses;
         auto allAreNotifications = sendBatchRequest(requests);
         if (! allAreNotifications) responses = receiveBatchResponse();
         return responses;
@@ -767,10 +767,10 @@ class RPCClient(API, Transport = TCPTransport)
 
         foreach (request; requests) {
             if (request.isNotification) {
-                reqs ~= RPCRequest(request.method, request.params)._data;
+                reqs ~= Request(request.method, request.params)._data;
             } else {
                 allAreNotifications = No.allAreNotifications;
-                reqs ~= RPCRequest(
+                reqs ~= Request(
                         _nextId++, request.method, request.params)._data;
             }
         }
@@ -779,19 +779,19 @@ class RPCClient(API, Transport = TCPTransport)
         return allAreNotifications;
     }
 
-    RPCResponse[long] receiveBatchResponse() {
-        RPCResponse[long] responses;
+    Response[long] receiveBatchResponse() {
+        Response[long] responses;
         auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
 
         if (resps.type == JSON_TYPE.ARRAY) {
             foreach (resp; resps.array) {
-                auto r = RPCResponse(resp);
+                auto r = Response(resp);
                 responses[r.id] = r;
             }
         } else {
             // Single non-array (error?) response due to a malformed or empty
             // batch.
-            auto resp = RPCResponse(resps);
+            auto resp = Response(resps);
             responses[resp.id] = resp;
         }
         return responses;
@@ -940,7 +940,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         if (received[0] == '[') {
             executeBatch(transport, api, received);
         } else {
-            auto req = RPCRequest.fromJSONString(received);
+            auto req = Request.fromJSONString(received);
             if (req.isNotification) {
                 executeMethod(req, api);
             } else {
@@ -962,7 +962,7 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
         api =       An instance of the class or struct containing the function
                     to call.
 */
-RPCResponse executeMethod(API)(RPCRequest request, API api)
+Response executeMethod(API)(Request request, API api)
         if (is(API == class)) {
 
     import std.traits : isFunction;
@@ -981,25 +981,25 @@ RPCResponse executeMethod(API)(RPCRequest request, API api)
 
                 if (request.isNotification) {
                     // TODO: I'd rather return nothing; this is just thrown away.
-                    RPCResponse r;
+                    Response r;
                     return r;
                 } else if (request.idType == JSON_TYPE.INTEGER) {
-                    return RPCResponse(request.id, JSONValue(retval));
+                    return Response(request.id, JSONValue(retval));
                 } else if (request.idType == JSON_TYPE.FLOAT) {
-                    return RPCResponse(request.id!double, JSONValue(retval));
+                    return Response(request.id!double, JSONValue(retval));
                 } else if (request.idType == JSON_TYPE.STRING) {
-                    return RPCResponse(request.id!string, JSONValue(retval));
+                    return Response(request.id!string, JSONValue(retval));
                 } else if (request.idType == JSON_TYPE.NULL) {
-                    return RPCResponse(null, JSONValue(retval));
+                    return Response(null, JSONValue(retval));
                 }
-                return RPCResponse(
+                return Response(
                         request._data["id"],
                         StandardErrorCode.InvalidRequest,
                         JSONValue("Invalid request ID type."));
             }
         }
     }
-    return RPCResponse(
+    return Response(
             request.id,
             StandardErrorCode.MethodNotFound,
             request._data);
@@ -1012,7 +1012,7 @@ char[] receiveRequest(Transport)(Transport transport) {
         return transport.receiveJSONObjectOrArray();
     } catch (InvalidDataReceived ex) {
         transport.send(
-                RPCResponse(
+                Response(
                     null,
                     StandardErrorCode.InvalidRequest,
                     JSONValue(ex.msg)
@@ -1020,7 +1020,7 @@ char[] receiveRequest(Transport)(Transport transport) {
         );
     } catch (Exception) {
         transport.send(
-                RPCResponse(
+                Response(
                     null,
                     StandardErrorCode.InternalError,
                     JSONValue(
@@ -1036,7 +1036,7 @@ JSONValue parseBatch(Transport)(Transport transport, const char[] request) {
         // TODO: The spec says to send a single response, but how do I
         // handle the ID? Need to check other implementations.
         transport.send(
-                RPCResponse(
+                Response(
                     null,
                     StandardErrorCode.ParseError,
                     JSONValue("Batch request is malformed.")
@@ -1050,7 +1050,7 @@ JSONValue parseBatch(Transport)(Transport transport, const char[] request) {
         // SPEC: Send a single response if the array is empty.
         // TODO: How do I handle the ID?
         transport.send(
-                RPCResponse(
+                Response(
                     null,
                     StandardErrorCode.InvalidRequest,
                     JSONValue("Received batch with no requests.")
@@ -1070,13 +1070,13 @@ void executeBatch(API, Transport)
     JSONValue[] responses;
     // TODO: Could parallelize these. Probably use constructor flag(?)
     foreach (request; batch.array) {
-        RPCRequest req;
+        Request req;
         try {
             // TODO: Horribly inefficient. Need a new constructor.
-            req = RPCRequest.fromJSONString(request.toJSON());
+            req = Request.fromJSONString(request.toJSON());
         } catch (InvalidDataReceived ex) {
             if ("id" in request) {
-                responses ~= RPCResponse(
+                responses ~= Response(
                         request["id"],
                         StandardErrorCode.InvalidRequest,
                         JSONValue(ex.msg))._data;
@@ -1084,7 +1084,7 @@ void executeBatch(API, Transport)
             continue;
         } catch (JSONException ex) {
             if ("id" in request) {
-                responses ~= RPCResponse(
+                responses ~= Response(
                         request["id"],
                         StandardErrorCode.ParseError,
                         JSONValue(ex.msg))._data;
@@ -1113,7 +1113,7 @@ void executeBatch(API, Transport)
         request = The request sent from the client.
         api     = The instantiated class with the method to execute.
 */
-auto execRPCMethod(API, string method)(RPCRequest request, API api) {
+auto execRPCMethod(API, string method)(Request request, API api) {
     import std.traits : ReturnType;
     mixin(
         "enum returnType = typeid(ReturnType!(API." ~ method ~ "));\n" ~
@@ -1227,11 +1227,11 @@ struct BatchRequest {
         code = A StandardErrorCode set to the error number.
 
     Returns:
-        The "error" dictionary to attach to the RPCResponse.
+        The "error" dictionary to attach to the Response.
 
     Example:
     ---
-    auto resp = RPCResponse(0, getStandardError(StandardErrorCode.InvalidRequest);
+    auto resp = Response(0, getStandardError(StandardErrorCode.InvalidRequest);
     ---
 */
 private JSONValue getStandardError(StandardErrorCode code) {
@@ -1353,16 +1353,16 @@ unittest {
     auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "void3params")
-            (RPCRequest(
+            (Request(
                 0,
                 "void3params",
                 JSONValue(`{"a": 3, "b": false, "c": 2.3}`.parseJSON)),
             api);
 
     auto r2 = execRPCMethod!(MyAPI, "voidArray")
-            (RPCRequest(1, "voidArray", JSONValue([1, 2])), api);
+            (Request(1, "voidArray", JSONValue([1, 2])), api);
     auto r3 = execRPCMethod!(MyAPI, "voidFunc")
-            (RPCRequest(2, "voidFunc"), api);
+            (Request(2, "voidFunc"), api);
 
     assert(api.void3params_called == true
             && api.voidArray_called == true
@@ -1374,11 +1374,11 @@ unittest {
     auto api = new MyAPI();
 
     auto r1 = execRPCMethod!(MyAPI, "retBool")
-            (RPCRequest(0, "retBool"), api);
+            (Request(0, "retBool"), api);
     assert(r1 == true);
 
     auto r2 = execRPCMethod!(MyAPI, "retUlong")
-            (RPCRequest(1, "retUlong", JSONValue(["some string"])), api);
+            (Request(1, "retUlong", JSONValue(["some string"])), api);
     assert(r2 == 19);
 }
 
@@ -1387,11 +1387,11 @@ unittest {
     auto api = new MyAPI();
 
     auto r1 = executeMethod(
-            RPCRequest(0, "retUlong", JSONValue(["some string"])), api);
+            Request(0, "retUlong", JSONValue(["some string"])), api);
     assert(r1.id == 0);
     assert(r1.result.unwrapValue!ulong == 19);
 
-    auto r2 = executeMethod(RPCRequest(1, "retInt", JSONValue([5])), api);
+    auto r2 = executeMethod(Request(1, "retInt", JSONValue([5])), api);
     assert(r2.id == 1);
     assert(r2.result.integer == 6);
 }
@@ -1400,7 +1400,7 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto resp = executeMethod(RPCRequest(0, "retFloat"), api);
+    auto resp = executeMethod(Request(0, "retFloat"), api);
     assert(resp.result.floating > 1.22 && resp.result.floating < 1.24);
 }
 
@@ -1408,11 +1408,11 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest(0, "retTrue"), api);
+    auto r1 = executeMethod(Request(0, "retTrue"), api);
     assert(r1.id == 0);
     assert(r1.result == JSONValue(true));
 
-    auto r2 = executeMethod(RPCRequest(1, "retFalse"), api);
+    auto r2 = executeMethod(Request(1, "retFalse"), api);
     assert(r2.id == 1);
     assert(r2.result == JSONValue(false));
 }
@@ -1421,7 +1421,7 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest(0, "retString"), api);
+    auto r1 = executeMethod(Request(0, "retString"), api);
     assert(r1.result.unwrapValue!string == "testing");
 }
 
@@ -1429,10 +1429,10 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto r1 = executeMethod(RPCRequest("my_id", "retString"), api);
+    auto r1 = executeMethod(Request("my_id", "retString"), api);
     assert(r1.id!string == "my_id");
 
-    auto r2 = executeMethod(RPCRequest(null, "retString"), api);
+    auto r2 = executeMethod(Request(null, "retString"), api);
     assert(r2.id!(typeof(null)) == null);
 }
 
@@ -1441,14 +1441,14 @@ unittest {
     auto api = new MyAPI();
 
     auto ret = executeMethod(
-            RPCRequest("áðý", "øbæårößΓαζ", JSONValue(["éçφωτz"])), api);
+            Request("áðý", "øbæårößΓαζ", JSONValue(["éçφωτz"])), api);
     assert(ret.result == JSONValue("éçφωτzâいはろшь ж๏เ"));
 }
 
 @test("executeMethod returns error when the method doesn't exist")
 unittest {
     auto api = new MyAPI();
-    auto r1 = executeMethod(RPCRequest(0, "noFunctionHere"), api);
+    auto r1 = executeMethod(Request(0, "noFunctionHere"), api);
 
     assert(r1.id!long == 0);
     assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
@@ -1462,7 +1462,7 @@ unittest {
 unittest {
     auto api = new MyAPI();
 
-    auto req = RPCRequest(0, "retTrue");
+    auto req = Request(0, "retTrue");
     req._data["id"] = JSONValue([1, 2]);
     auto resp = executeMethod(req, api);
 
@@ -1501,7 +1501,7 @@ unittest {
     auto resp2 = client.call("func", JSONValue([3]));
 }
 
-@test("[DOCTEST] RPCClient example: call(RPCRequest) allows non-integral IDs")
+@test("[DOCTEST] RPCClient example: call(Request) allows non-integral IDs")
 unittest {
     interface MyAPI { bool my_func(int[] values); }
     auto sock = new FakeSocket();
@@ -1509,7 +1509,7 @@ unittest {
     auto client = new RPCClient!MyAPI(transport);
 
     sock.receiveReturnValue = `{"jsonrpc":"2.0","id":"my_id","result":true}`;
-    auto req = RPCRequest("my_id", "my_func", JSONValue([1, 2, 3]));
+    auto req = Request("my_id", "my_func", JSONValue([1, 2, 3]));
     auto response = client.call(req);
 
     assert(unwrapValue!bool(response.result) == true);
@@ -1526,11 +1526,10 @@ unittest {
 
     client.notify("func", `{"val": 3}`.parseJSON);
     assert(sock.lastDataSent ==
-            RPCRequest("func", `{"val":3}`.parseJSON)._data.toJSON);
+            Request("func", `{"val":3}`.parseJSON)._data.toJSON);
 
     client.notify("func", JSONValue([3]));
-    assert(sock.lastDataSent ==
-            RPCRequest("func", `[3]`.parseJSON)._data.toJSON);
+    assert(sock.lastDataSent == Request("func", `[3]`.parseJSON)._data.toJSON);
 }
 
 @test("[DOCTEST] Execute batches of requests.")
