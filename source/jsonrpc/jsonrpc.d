@@ -48,6 +48,7 @@ module jsonrpc.jsonrpc;
 
 import std.json;
 import std.socket;
+import std.traits : isAggregateType;
 
 import jsonrpc.transport;
 import jsonrpc.exception;
@@ -58,7 +59,7 @@ else private struct test { string name; }
 /** An RPC request constructed by the client to send to the RPC server.
 
     The Request contains the ID of the request, the method to call, and any
-    parameters to pass to the method. You should not need to manually create an
+    parameters to pass to the method. You should not need to manually create a
     Request object; the RPCClient will do this for you.
 */
 struct Request {
@@ -638,7 +639,6 @@ class RPCClient(API, Transport = TCPTransport)
         assert(func.length > 0);
     } body {
         auto req = Request(_nextId++, func, params);
-
         _transport.send(req.toJSONString());
 
         auto respObj = _transport.receiveJSONObjectOrArray();
@@ -1561,4 +1561,75 @@ unittest {
     assert(responses[0].result == JSONValue(null), "Incorrect [0] result");
     assert(responses[1].result == JSONValue(123), "Incorrect [1] result");
     assert(responses[2].result == JSONValue(0), "Incorrect [2] result");
+}
+
+@test("serialize converts simple structs to JSONValues")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        int[] d;
+        string[string] e;
+    }
+
+    string[string] _e; _e["asdf"] = ";lkj";
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: [1, 2, 3],
+        e: _e
+    };
+
+    auto json = serialize(mydata);
+    JSONValue expected = JSONValue(
+            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
+    assert(json == expected, json.toJSON);
+}
+
+@test("serialize converts nested structs to JSONValues")
+unittest {
+    struct MoreData {
+        int e;
+        string f;
+    }
+
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        MoreData d;
+    }
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: MoreData(123, "g")
+    };
+
+    auto json = serialize(mydata);
+    auto expected = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
+    assert(json == expected, json.toJSON);
+}
+
+JSONValue serialize(T)(T obj) if (isAggregateType!T) {
+    import std.range : iota;
+    import std.traits : Fields, FieldNameTuple, isBuiltinType;
+
+    JSONValue json;
+    alias fields = Fields!T;
+    alias fieldNames = FieldNameTuple!T;
+
+    static foreach (int i; iota(fields.length)) {
+        static if (isBuiltinType!(fields[i])) {
+            mixin(`json["` ~ fieldNames[i] ~ `"] = obj.` ~ fieldNames[i] ~ `;`);
+        } else static if (isAggregateType!(fields[i])) {
+            mixin(`json["` ~ fieldNames[i] ~ `"] = serialize(obj.` ~ fieldNames[i] ~ `);`);
+        } else assert(0, "TODO: Exception - incompatible type.");
+    }
+
+    return json;
 }
