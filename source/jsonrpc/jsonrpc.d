@@ -1258,7 +1258,7 @@ private JSONValue getStandardError(StandardErrorCode code) {
     return err;
 }
 
-/** Unwrap a scalar value from a JSONValue object. */
+/** Unwrap a D value from a JSONValue. */
 auto unwrapValue(T)(JSONValue value) {
     import std.traits;
     static if (isFloatingPoint!T) {
@@ -1282,10 +1282,20 @@ auto unwrapValue(T)(JSONValue value) {
         raise!(InvalidArgument, value)("Expected a boolean value.");
     } else static if (is(T == typeof(null))) {
         return null;
-    } else {
-        raise!(InvalidArgument, value)("Non-scalar value cannot be unwrapped.");
+    } else static if (isArray!T) {
+        T elems;
+        foreach (elem; value.array) {
+            elems ~= unwrapValue!(ForeachType!T)(elem);
+        }
+        return elems;
+    } else { // JSON Object; return an AA.
+        T obj;
+        foreach (key, val; value.object) {
+            obj[key] = unwrapValue!(KeyType!T)(val);
+        }
+        return obj;
     }
-    assert(0);
+    assert(0, "Missing JSON value type.");
 }
 
 @test("unwrapValue retrieves scalar values from a JSONValue")
@@ -1563,6 +1573,32 @@ unittest {
     assert(responses[2].result == JSONValue(0), "Incorrect [2] result");
 }
 
+@("We can pass POD objects as RPC parameters.")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+    }
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+    };
+
+    interface API {
+        MyData func(MyData params);
+    }
+
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport(sock);
+    auto client = new RPCClient!API(transport);
+
+    // TODO: I want automatic serialization: auto ret = client.func(mydata);
+    auto ret = client.call("func", mydata.serialize);
+}
+
 @test("serialize converts simple structs to JSONValues")
 unittest {
     struct MyData {
@@ -1615,21 +1651,109 @@ unittest {
     assert(json == expected, json.toJSON);
 }
 
+/** Serialize a struct to a JSON Object.
+
+    Template_Parameters:
+        T = The type of object to serialize.
+
+    Params:
+        obj = The object to serialize to JSON.
+*/
 JSONValue serialize(T)(T obj) if (isAggregateType!T) {
-    import std.range : iota;
-    import std.traits : Fields, FieldNameTuple, isBuiltinType;
+    import std.traits : Fields, FieldNameTuple;
 
     JSONValue json;
     alias fields = Fields!T;
     alias fieldNames = FieldNameTuple!T;
 
-    static foreach (int i; iota(fields.length)) {
-        static if (isBuiltinType!(fields[i])) {
-            mixin(`json["` ~ fieldNames[i] ~ `"] = obj.` ~ fieldNames[i] ~ `;`);
-        } else static if (isAggregateType!(fields[i])) {
+    static foreach (int i; 0..fields.length) {
+        static if (isAggregateType!(fields[i])) {
             mixin(`json["` ~ fieldNames[i] ~ `"] = serialize(obj.` ~ fieldNames[i] ~ `);`);
-        } else assert(0, "TODO: Exception - incompatible type.");
+        } else{
+            mixin(`json["` ~ fieldNames[i] ~ `"] = obj.` ~ fieldNames[i] ~ `;`);
+        }
     }
 
     return json;
+}
+
+@test("deserialize converts a JSONValue to a struct")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        int[] d;
+        string[string] e;
+    }
+
+    string[string] _e; _e["asdf"] = ";lkj";
+
+    MyData expected = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: [1, 2, 3],
+        e: _e
+    };
+
+    JSONValue input = JSONValue(
+            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
+    assert(input.deserialize!MyData == expected);
+}
+
+@test("deserialize converts a JSONValue to a nested struct")
+unittest {
+    struct MoreData {
+        int e;
+        string f;
+    }
+
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        MoreData d;
+    }
+
+    MyData expected = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: MoreData(123, "g")
+    };
+
+    auto input = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
+    assert(input.deserialize!MyData == expected);
+}
+
+/** Deserialize a JSON Object to the specified aggregate D type.
+
+    Template_Parameters:
+        T = The type of data object.
+
+    Params:
+        json = The JSON object to deserialize.
+*/
+T deserialize(T)(JSONValue json) if (isAggregateType!T) {
+    import std.range : iota;
+    import std.traits : Fields, FieldNameTuple, fullyQualifiedName;
+
+    T newObject;
+    alias types = Fields!T;
+    alias names = FieldNameTuple!T;
+
+    static foreach (i; 0..types.length) {
+        static if (isAggregateType!(types[i])) {
+            mixin(`newObject.` ~ names[i]
+                ~ ` = deserialize!(typeof(newObject.` ~ names[i] ~ `))(json["`
+                    ~ names[i] ~ `"]);`);
+        } else {
+            mixin(`newObject.` ~ names[i] ~
+                ` = unwrapValue!(` ~ types[i].stringof ~ `)(json["`
+                    ~ names[i] ~ `"]);`);
+        }
+    }
+
+    return newObject;
 }
