@@ -42,7 +42,7 @@ void main() {
     assert(client.one(3) == false);
     assert(client.three() == 100);
 
-    // `call` returns the RPCResponse from the server.
+    // `call` returns the Response from the server.
     auto resp = client.call("one", 3);
     assert(resp.result == JSONValue(false));
 
