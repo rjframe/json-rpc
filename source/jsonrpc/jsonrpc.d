@@ -977,20 +977,27 @@ Response executeMethod(API)(Request request, API api)
 
         static if (isMethodAPublicFunction) {
             if (method == request.method) {
-                auto retval = execRPCMethod!(API, method)(request, api);
+                static if (isAggregateType!
+                            (typeof(execRPCMethod!(API, method)(request, api)))) {
+                    auto retval =
+                            execRPCMethod!(API, method)(request, api).serialize;
+                } else {
+                    auto retval = JSONValue(
+                            execRPCMethod!(API, method)(request, api));
+                }
 
                 if (request.isNotification) {
                     // TODO: I'd rather return nothing; this is just thrown away.
                     Response r;
                     return r;
                 } else if (request.idType == JSON_TYPE.INTEGER) {
-                    return Response(request.id, JSONValue(retval));
+                    return Response(request.id, retval);
                 } else if (request.idType == JSON_TYPE.FLOAT) {
-                    return Response(request.id!double, JSONValue(retval));
+                    return Response(request.id!double, retval);
                 } else if (request.idType == JSON_TYPE.STRING) {
-                    return Response(request.id!string, JSONValue(retval));
+                    return Response(request.id!string, retval);
                 } else if (request.idType == JSON_TYPE.NULL) {
-                    return Response(null, JSONValue(retval));
+                    return Response(null, retval);
                 }
                 return Response(
                         request._data["id"],
@@ -1003,6 +1010,191 @@ Response executeMethod(API)(Request request, API api)
             request.id,
             StandardErrorCode.MethodNotFound,
             request._data);
+}
+
+@("We can pass POD objects as RPC parameters.")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+    }
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+    };
+
+    interface API {
+        MyData func(MyData params);
+    }
+
+    auto sock = new FakeSocket();
+    auto transport = TCPTransport(sock);
+    auto client = new RPCClient!API(transport);
+
+    // TODO: I want automatic serialization: auto ret = client.func(mydata);
+    auto ret = client.call("func", mydata.serialize);
+}
+
+@test("serialize converts simple structs to JSONValues")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        int[] d;
+        string[string] e;
+    }
+
+    string[string] _e; _e["asdf"] = ";lkj";
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: [1, 2, 3],
+        e: _e
+    };
+
+    auto json = serialize(mydata);
+    JSONValue expected = JSONValue(
+            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
+    assert(json == expected, json.toJSON);
+}
+
+@test("serialize converts nested structs to JSONValues")
+unittest {
+    struct MoreData {
+        int e;
+        string f;
+    }
+
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        MoreData d;
+    }
+
+    MyData mydata = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: MoreData(123, "g")
+    };
+
+    auto json = serialize(mydata);
+    auto expected = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
+    assert(json == expected, json.toJSON);
+}
+
+/** Serialize a struct to a JSON Object.
+
+    Template_Parameters:
+        T = The type of object to serialize.
+
+    Params:
+        obj = The object to serialize to JSON.
+*/
+JSONValue serialize(T)(T obj) if (isAggregateType!T) {
+    import std.traits : Fields, FieldNameTuple;
+
+    JSONValue json;
+    alias fields = Fields!T;
+    alias fieldNames = FieldNameTuple!T;
+
+    static foreach (int i; 0..fields.length) {
+        static if (isAggregateType!(fields[i])) {
+            mixin(`json["` ~ fieldNames[i] ~ `"] = serialize(obj.` ~ fieldNames[i] ~ `);`);
+        } else{
+            mixin(`json["` ~ fieldNames[i] ~ `"] = obj.` ~ fieldNames[i] ~ `;`);
+        }
+    }
+
+    return json;
+}
+
+@test("deserialize converts a JSONValue to a struct")
+unittest {
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        int[] d;
+        string[string] e;
+    }
+
+    string[string] _e; _e["asdf"] = ";lkj";
+
+    MyData expected = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: [1, 2, 3],
+        e: _e
+    };
+
+    JSONValue input = JSONValue(
+            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
+    assert(input.deserialize!MyData == expected);
+}
+
+@test("deserialize converts a JSONValue to a nested struct")
+unittest {
+    struct MoreData {
+        int e;
+        string f;
+    }
+
+    struct MyData {
+        int a;
+        string b;
+        float c;
+        MoreData d;
+    }
+
+    MyData expected = {
+        a: 1,
+        b: "2",
+        c: 3.0,
+        d: MoreData(123, "g")
+    };
+
+    auto input = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
+    assert(input.deserialize!MyData == expected);
+}
+
+/** Deserialize a JSON Object to the specified aggregate D type.
+
+    Template_Parameters:
+        T = The type of data object.
+
+    Params:
+        json = The JSON object to deserialize.
+*/
+T deserialize(T)(JSONValue json) if (isAggregateType!T) {
+    import std.traits : Fields, FieldNameTuple;
+
+    T newObject;
+    alias types = Fields!T;
+    alias names = FieldNameTuple!T;
+
+    static foreach (i; 0..types.length) {
+        pragma(msg, types[i].stringof ~ " " ~ names[i]);
+        static if (isAggregateType!(types[i])) {
+            mixin(`newObject.` ~ names[i]
+                ~ ` = deserialize!(typeof(newObject.` ~ names[i] ~ `))(json["`
+                    ~ names[i] ~ `"]);`);
+        } else {
+            mixin(`newObject.` ~ names[i] ~
+                ` = unwrapValue!(` ~ types[i].stringof ~ `)(json["`
+                    ~ names[i] ~ `"]);`);
+        }
+    }
+
+    return newObject;
 }
 
 private:
@@ -1143,7 +1335,7 @@ auto execRPCMethod(API, string method)(Request request, API api) {
 static string GenCaller(API, string method)() pure {
     import std.conv : text;
     import std.meta : AliasSeq;
-    import std.traits : Parameters, ParameterIdentifierTuple, ReturnType;
+    import std.traits;
 
     mixin(
         "alias paramNames = AliasSeq!(ParameterIdentifierTuple!(API."
@@ -1155,8 +1347,17 @@ static string GenCaller(API, string method)() pure {
     // TODO: Validate against API - if a named param is passed that isn't on the
     // method we need to return an error response. See execRPCMethod.
     string func =
-            "\nauto ref callRPCFunc(string method, ARGS)(API api, ARGS args) {\n"
-        ~ "    JSONValue vals = args;\n"
+        "\nauto ref callRPCFunc(string method, ARGS)(API api, ARGS args) {\n";
+
+    static foreach(i; 0..paramTypes.length) {
+        static if (isAggregateType!(paramTypes[i]))
+            func ~=
+          "    import " ~ moduleName!(paramTypes[i]) ~ " : "
+                    ~ paramTypes[i].stringof ~ ";\n";
+    }
+
+    func ~=
+          "    JSONValue vals = args;\n"
         ~ "    if (args.type == JSON_TYPE.NULL) { \n"
         ~ "        vals = JSONValue(`[]`.parseJSON);\n"
         ~ "    } else if (args.type == JSON_TYPE.OBJECT) {\n"
@@ -1168,12 +1369,13 @@ static string GenCaller(API, string method)() pure {
           "        vals.array ~= JSONValue();\n";
     }
 
+
     func ~=
           "        foreach (string key, val; args) {\n";
 
     static foreach(i; 0..paramTypes.length) {
         func ~=
-          "            if (key == " ~ paramNames[i].stringof ~ ") "
+          "            if (key == " ~ paramNames[i].stringof ~ ")\n"
         ~ "                vals[" ~ i.text ~ "] = val;\n";
     }
 
@@ -1195,8 +1397,13 @@ static string GenCaller(API, string method)() pure {
 
     static if (paramTypes.length > 0) {
         static foreach(i; 0..paramTypes.length) {
-            func ~=
-                "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+            static if (isAggregateType!(paramTypes[i])) {
+                func ~=
+                    "vals[" ~ i.text ~ "].deserialize!(" ~ paramTypes[i].stringof ~ "), ";
+            } else {
+                func ~=
+                    "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+            }
         }
     }
     func ~= ");\n}\n";
@@ -1571,189 +1778,4 @@ unittest {
     assert(responses[0].result == JSONValue(null), "Incorrect [0] result");
     assert(responses[1].result == JSONValue(123), "Incorrect [1] result");
     assert(responses[2].result == JSONValue(0), "Incorrect [2] result");
-}
-
-@("We can pass POD objects as RPC parameters.")
-unittest {
-    struct MyData {
-        int a;
-        string b;
-        float c;
-    }
-
-    MyData mydata = {
-        a: 1,
-        b: "2",
-        c: 3.0,
-    };
-
-    interface API {
-        MyData func(MyData params);
-    }
-
-    auto sock = new FakeSocket();
-    auto transport = TCPTransport(sock);
-    auto client = new RPCClient!API(transport);
-
-    // TODO: I want automatic serialization: auto ret = client.func(mydata);
-    auto ret = client.call("func", mydata.serialize);
-}
-
-@test("serialize converts simple structs to JSONValues")
-unittest {
-    struct MyData {
-        int a;
-        string b;
-        float c;
-        int[] d;
-        string[string] e;
-    }
-
-    string[string] _e; _e["asdf"] = ";lkj";
-
-    MyData mydata = {
-        a: 1,
-        b: "2",
-        c: 3.0,
-        d: [1, 2, 3],
-        e: _e
-    };
-
-    auto json = serialize(mydata);
-    JSONValue expected = JSONValue(
-            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
-    assert(json == expected, json.toJSON);
-}
-
-@test("serialize converts nested structs to JSONValues")
-unittest {
-    struct MoreData {
-        int e;
-        string f;
-    }
-
-    struct MyData {
-        int a;
-        string b;
-        float c;
-        MoreData d;
-    }
-
-    MyData mydata = {
-        a: 1,
-        b: "2",
-        c: 3.0,
-        d: MoreData(123, "g")
-    };
-
-    auto json = serialize(mydata);
-    auto expected = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
-    assert(json == expected, json.toJSON);
-}
-
-/** Serialize a struct to a JSON Object.
-
-    Template_Parameters:
-        T = The type of object to serialize.
-
-    Params:
-        obj = The object to serialize to JSON.
-*/
-JSONValue serialize(T)(T obj) if (isAggregateType!T) {
-    import std.traits : Fields, FieldNameTuple;
-
-    JSONValue json;
-    alias fields = Fields!T;
-    alias fieldNames = FieldNameTuple!T;
-
-    static foreach (int i; 0..fields.length) {
-        static if (isAggregateType!(fields[i])) {
-            mixin(`json["` ~ fieldNames[i] ~ `"] = serialize(obj.` ~ fieldNames[i] ~ `);`);
-        } else{
-            mixin(`json["` ~ fieldNames[i] ~ `"] = obj.` ~ fieldNames[i] ~ `;`);
-        }
-    }
-
-    return json;
-}
-
-@test("deserialize converts a JSONValue to a struct")
-unittest {
-    struct MyData {
-        int a;
-        string b;
-        float c;
-        int[] d;
-        string[string] e;
-    }
-
-    string[string] _e; _e["asdf"] = ";lkj";
-
-    MyData expected = {
-        a: 1,
-        b: "2",
-        c: 3.0,
-        d: [1, 2, 3],
-        e: _e
-    };
-
-    JSONValue input = JSONValue(
-            `{"a":1,"b":"2","c":3.0,"d":[1,2,3],"e":{"asdf":";lkj"}}`.parseJSON);
-    assert(input.deserialize!MyData == expected);
-}
-
-@test("deserialize converts a JSONValue to a nested struct")
-unittest {
-    struct MoreData {
-        int e;
-        string f;
-    }
-
-    struct MyData {
-        int a;
-        string b;
-        float c;
-        MoreData d;
-    }
-
-    MyData expected = {
-        a: 1,
-        b: "2",
-        c: 3.0,
-        d: MoreData(123, "g")
-    };
-
-    auto input = JSONValue(`{"a":1,"b":"2","c":3.0,"d":{"e":123,"f":"g"}}`.parseJSON);
-    assert(input.deserialize!MyData == expected);
-}
-
-/** Deserialize a JSON Object to the specified aggregate D type.
-
-    Template_Parameters:
-        T = The type of data object.
-
-    Params:
-        json = The JSON object to deserialize.
-*/
-T deserialize(T)(JSONValue json) if (isAggregateType!T) {
-    import std.range : iota;
-    import std.traits : Fields, FieldNameTuple, fullyQualifiedName;
-
-    T newObject;
-    alias types = Fields!T;
-    alias names = FieldNameTuple!T;
-
-    static foreach (i; 0..types.length) {
-        static if (isAggregateType!(types[i])) {
-            mixin(`newObject.` ~ names[i]
-                ~ ` = deserialize!(typeof(newObject.` ~ names[i] ~ `))(json["`
-                    ~ names[i] ~ `"]);`);
-        } else {
-            mixin(`newObject.` ~ names[i] ~
-                ` = unwrapValue!(` ~ types[i].stringof ~ `)(json["`
-                    ~ names[i] ~ `"]);`);
-        }
-    }
-
-    return newObject;
 }
