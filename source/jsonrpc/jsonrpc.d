@@ -1100,7 +1100,6 @@ unittest {
 */
 JSONValue serialize(T)(T obj) if (isAggregateType!T) {
     import std.traits : Fields, FieldNameTuple;
-
     JSONValue json;
     alias fields = Fields!T;
     alias fieldNames = FieldNameTuple!T;
@@ -1177,12 +1176,11 @@ unittest {
 T deserialize(T)(JSONValue json) if (isAggregateType!T) {
     import std.traits : Fields, FieldNameTuple;
 
-    T newObject;
     alias types = Fields!T;
     alias names = FieldNameTuple!T;
+    T newObject;
 
     static foreach (i; 0..types.length) {
-        pragma(msg, types[i].stringof ~ " " ~ names[i]);
         static if (isAggregateType!(types[i])) {
             mixin(`newObject.` ~ names[i]
                 ~ ` = deserialize!(typeof(newObject.` ~ names[i] ~ `))(json["`
@@ -1193,7 +1191,6 @@ T deserialize(T)(JSONValue json) if (isAggregateType!T) {
                     ~ names[i] ~ `"]);`);
         }
     }
-
     return newObject;
 }
 
@@ -1375,8 +1372,7 @@ static string GenCaller(API, string method)() pure {
 
     static foreach(i; 0..paramTypes.length) {
         func ~=
-          "            if (key == " ~ paramNames[i].stringof ~ ")\n"
-        ~ "                vals[" ~ i.text ~ "] = val;\n";
+          "            vals[" ~ i.text ~ "] = val;\n";
     }
 
     func ~=
