@@ -1301,6 +1301,9 @@ void executeBatch(API, Transport)
     Params:
         request = The request sent from the client.
         api     = The instantiated class with the method to execute.
+
+    Returns:
+        The return value of the RPC method.
 */
 auto execRPCMethod(API, string method)(Request request, API api) {
     import std.traits : ReturnType;
@@ -1309,7 +1312,7 @@ auto execRPCMethod(API, string method)(Request request, API api) {
         GenCaller!(API, method)
     );
 
-    static if((returnType is typeid(void))) {
+    static if(returnType is typeid(void)) {
         callRPCFunc!(method, JSONValue)(api, request.params);
         return null;
     } else {
@@ -1355,31 +1358,16 @@ static string GenCaller(API, string method)() pure {
 
     func ~=
           "    JSONValue vals = args;\n"
-        ~ "    if (args.type == JSON_TYPE.NULL) { \n"
-        ~ "        vals = JSONValue(`[]`.parseJSON);\n"
-        ~ "    } else if (args.type == JSON_TYPE.OBJECT) {\n"
-        ~ "        vals = JSONValue(`[]`.parseJSON);\n";
+        ~ "    if (args.type != JSON_TYPE.OBJECT) {\n"
+        ~ "        vals = JSONValue(`{}`.parseJSON);\n";
 
-    // Size the array to fit our data.
-    static foreach(i; 0..paramTypes.length) {
+    static foreach (i; 0..paramNames.length) {
         func ~=
-          "        vals.array ~= JSONValue();\n";
+          "        vals[`" ~ paramNames[i] ~ "`] = args[" ~ i.text ~ "];\n";
     }
-
-
-    func ~=
-          "        foreach (string key, val; args) {\n";
-
-    static foreach(i; 0..paramTypes.length) {
         func ~=
-          "            vals[" ~ i.text ~ "] = val;\n";
-    }
+          "    }\n"; // args.type == JSON_TYPE.ARRAY
 
-    func ~=
-          "        }\n" // foreach (key, val)
-        ~ "    }\n" // if (JSON_TYPE.OBJECT)
-
-        ~ "    assert(vals.array.length == " ~ paramTypes.length.text ~ ");\n";
 
     static if (returnType is typeid(void)) {
         func ~= "    ";
@@ -1395,10 +1383,10 @@ static string GenCaller(API, string method)() pure {
         static foreach(i; 0..paramTypes.length) {
             static if (isAggregateType!(paramTypes[i])) {
                 func ~=
-                    "vals[" ~ i.text ~ "].deserialize!(" ~ paramTypes[i].stringof ~ "), ";
+                    "vals[`" ~ paramNames[i] ~ "`].deserialize!(" ~ paramTypes[i].stringof ~ "), ";
             } else {
                 func ~=
-                    "vals[" ~ i.text ~ "].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
+                    "vals[`" ~ paramNames[i] ~ "`].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
             }
         }
     }
@@ -1574,6 +1562,7 @@ unittest {
 
     auto r2 = execRPCMethod!(MyAPI, "voidArray")
             (Request(1, "voidArray", JSONValue([1, 2])), api);
+
     auto r3 = execRPCMethod!(MyAPI, "voidFunc")
             (Request(2, "voidFunc"), api);
 
