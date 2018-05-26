@@ -1366,8 +1366,7 @@ static string GenCaller(API, string method)() pure {
           "        vals[`" ~ paramNames[i] ~ "`] = args[" ~ i.text ~ "];\n";
     }
         func ~=
-          "    }\n"; // args.type == JSON_TYPE.ARRAY
-
+          "    }\n"; // args.type != JSON_TYPE.OBJECT
 
     static if (returnType is typeid(void)) {
         func ~= "    ";
@@ -1383,7 +1382,7 @@ static string GenCaller(API, string method)() pure {
         static foreach(i; 0..paramTypes.length) {
             static if (isAggregateType!(paramTypes[i])) {
                 func ~=
-                    "vals[`" ~ paramNames[i] ~ "`].deserialize!(" ~ paramTypes[i].stringof ~ "), ";
+                    "vals.deserialize!(" ~ paramTypes[i].stringof ~ "), ";
             } else {
                 func ~=
                     "vals[`" ~ paramNames[i] ~ "`].unwrapValue!" ~ paramTypes[i].stringof ~ ", ";
