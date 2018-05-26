@@ -1,0 +1,12 @@
+{
+	"name": "custom_objects",
+	"authors": [
+		"Ryan Frame"
+	],
+    "dependencies": {
+        "jsonrpc": { "path": "../../" }
+    },
+	"description": "Test JSON-RPC client/server.",
+	"copyright": "Copyright © 2017-2018 Ryan Frame",
+	"license": "MIT"
+}
