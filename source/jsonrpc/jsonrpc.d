@@ -964,18 +964,23 @@ void handleClient(API, Transport = TCPTransport)(Transport transport, API api)
 */
 Response executeMethod(API)(Request request, API api)
         if (is(API == class)) {
-
     import std.traits : isFunction;
-    // TODO: Filter out @disable -d functions
-    // 2.079.0 introduces __traits(isDisabled)
+
     foreach(method; __traits(derivedMembers, API)) {
         mixin(
             "enum isMethodAPublicFunction =\n" ~
             "   isFunction!(api." ~ method ~ ") &&\n" ~
             "   __traits(getProtection, api." ~ method ~ ") == `public`;\n"
         );
+        static if (__VERSION__ >= 2079) {
+            mixin(
+                "enum isDisabledFunction = __traits(isDisabled, api." ~ method ~ ");"
+            );
+        } else {
+            enum isDisabledFunction = false;
+        }
 
-        static if (isMethodAPublicFunction) {
+        static if (isMethodAPublicFunction && !isDisabledFunction) {
             if (method == request.method) {
                 static if (isAggregateType!
                             (typeof(execRPCMethod!(API, method)(request, api)))) {
@@ -1528,6 +1533,11 @@ version(unittest) {
             throw new Exception("Private members should not be callable.");
         }
 
+        @disable
+        void disabledMethod() {
+            throw new Exception("Disabled members should not be callable.");
+        }
+
         bool retBool() { return true; }
         alias retTrue = retBool;
         bool retFalse() { return false; }
@@ -1670,6 +1680,34 @@ unittest {
     assert(resp._data["id"] == JSONValue([1, 2]));
     assert(resp.error["code"].integer == StandardErrorCode.InvalidRequest,
             "Incorrect error.");
+}
+
+@test("executeMethod will not execute private methods")
+unittest {
+    auto api = new MyAPI();
+    auto r1 = executeMethod(Request(0, "dontCallThis"), api);
+
+    assert(r1.id!long == 0);
+    assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
+            "Wrong error.");
+
+    assert(r1.error["data"]["method"].str == "dontCallThis",
+            "Did not include method.");
+}
+
+static if (__VERSION__ >= 2079) {
+    @test("executeMethod will not execute disabled methods")
+    unittest {
+        auto api = new MyAPI();
+        auto r1 = executeMethod(Request(0, "disabledMethod"), api);
+
+        assert(r1.id!long == 0);
+        assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
+                "Wrong error.");
+
+        assert(r1.error["data"]["method"].str == "disabledMethod",
+                "Did not include method.");
+    }
 }
 
 @test("[DOCTEST] RPCClient example: opDispatch")
