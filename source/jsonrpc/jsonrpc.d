@@ -53,6 +53,11 @@ import std.traits : isAggregateType;
 import jsonrpc.transport;
 import jsonrpc.exception;
 
+static if (__VERSION__ < 2079) {
+    // 2.079 was the first to allow traits(isDisabled, ...).
+    assert(0, "The minimum supported version of the JSON-RPC library is the DMD 2.079.0 frontend.");
+}
+
 version(Have_tested) import tested : test = name;
 else private struct test { string name; }
 
@@ -972,13 +977,9 @@ Response executeMethod(API)(Request request, API api)
             "   isFunction!(api." ~ method ~ ") &&\n" ~
             "   __traits(getProtection, api." ~ method ~ ") == `public`;\n"
         );
-        static if (__VERSION__ >= 2079) {
-            mixin(
-                "enum isDisabledFunction = __traits(isDisabled, api." ~ method ~ ");"
-            );
-        } else {
-            enum isDisabledFunction = false;
-        }
+        mixin(
+            "enum isDisabledFunction = __traits(isDisabled, api." ~ method ~ ");"
+        );
 
         static if (isMethodAPublicFunction && !isDisabledFunction) {
             if (method == request.method) {
@@ -1695,19 +1696,17 @@ unittest {
             "Did not include method.");
 }
 
-static if (__VERSION__ >= 2079) {
-    @test("executeMethod will not execute disabled methods")
-    unittest {
-        auto api = new MyAPI();
-        auto r1 = executeMethod(Request(0, "disabledMethod"), api);
+@test("executeMethod will not execute disabled methods")
+unittest {
+    auto api = new MyAPI();
+    auto r1 = executeMethod(Request(0, "disabledMethod"), api);
 
-        assert(r1.id!long == 0);
-        assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
-                "Wrong error.");
+    assert(r1.id!long == 0);
+    assert(r1.error["code"].integer == StandardErrorCode.MethodNotFound,
+            "Wrong error.");
 
-        assert(r1.error["data"]["method"].str == "disabledMethod",
-                "Did not include method.");
-    }
+    assert(r1.error["data"]["method"].str == "disabledMethod",
+            "Did not include method.");
 }
 
 @test("[DOCTEST] RPCClient example: opDispatch")
