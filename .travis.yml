@@ -7,15 +7,14 @@ os:
     - osx
 
 d:
-    - dmd-2.080.0
-    - dmd-2.079.1
-    - dmd-2.078.3
-    - dmd-2.077.1
-    - dmd-2.076.1
+    - dmd-2.082.1 # 2018 Oct 10 / Add UDAs on function parameters.
+    - dmd-2.081.2 # 2018 Aug 12 / Add expression-based contracts.
+    - dmd-2.080.1 # 2018 Jun 7
+    - dmd-2.079.1 # 2018 Apr 14
+    - ldc-1.12.0 # 2.082.1
+    - ldc-1.11.0 # 2.081.2
+    - ldc-1.10.0 # 2.080.1
     - ldc-1.9.0 # 2.079.1
-    - ldc-1.8.0 # 2.078.3
-    - ldc-1.7.0 # 2.077.1
-    - ldc-1.6.0 # 2.076.1
 
 script:
     - dub test -b unittest-cov --compiler=${DC}
