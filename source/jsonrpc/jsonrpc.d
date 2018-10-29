@@ -55,7 +55,7 @@ import jsonrpc.exception;
 
 static if (__VERSION__ < 2079) {
     // 2.079 was the first to allow traits(isDisabled, ...).
-    assert(0, "The minimum supported version of the JSON-RPC library is the DMD 2.079.0 frontend.");
+    static assert(0, "The minimum supported version of the JSON-RPC library is the DMD 2.079.0 frontend.");
 }
 
 version(Have_tested) import tested : test = name;
