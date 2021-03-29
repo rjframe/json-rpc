@@ -111,8 +111,8 @@ struct Request {
     */
     this(JSONValue id, string method, JSONValue params) in {
         assert(method.length > 0);
-        assert(id.type != JSON_TYPE.OBJECT);
-        assert(id.type != JSON_TYPE.ARRAY);
+        assert(id.type != JSONType.object);
+        assert(id.type != JSONType.array);
     } body {
         _data["id"] = id;
         _data["method"] = method;
@@ -192,7 +192,7 @@ struct Request {
         Throws:
             IncorrectType if this request is a notification.
     */
-    @property JSON_TYPE idType() {
+    @property JSONType idType() {
         if (this.isNotification) {
             raise!(IncorrectType)("There is no ID in a notification.");
         }
@@ -223,7 +223,7 @@ struct Request {
     static Request fromJSONString(const char[] str) {
         auto json = str.parseJSON;
         enforce!(InvalidDataReceived, str)
-                (json.type != JSON_TYPE.NULL
+                (json.type != JSONType.null_
                      && "method" in json
                      && "jsonrpc" in json && json["jsonrpc"].str == "2.0",
                 "Request is missing 'jsonrpc', 'id', and/or 'method' fields.");
@@ -317,9 +317,9 @@ struct Request {
     */
     @property void params(JSONValue val)
     {
-        if (val.type != JSON_TYPE.OBJECT
-                && val.type != JSON_TYPE.ARRAY
-                && val.type != JSON_TYPE.NULL) {
+        if (val.type != JSONType.object
+                && val.type != JSONType.array
+                && val.type != JSONType.null_) {
 
             _data["params"] = JSONValue([val]);
         } else _data["params"] = val;
@@ -374,7 +374,7 @@ struct Response {
         assert(resp.id!(typeof(null)) == null);
     }
 
-    @property JSON_TYPE idType() { return _data["id"].type; }
+    @property JSONType idType() { return _data["id"].type; }
 
     // TODO: These are mutually exclusive; I shouldn't have properties for both
     // as valid accessors.
@@ -430,7 +430,7 @@ struct Response {
         _data["jsonrpc"] = "2.0";
         _data["id"] = id;
         _data["error"] = getStandardError(error);
-        if (errData.type != JSON_TYPE.NULL) _data["error"]["data"] = errData;
+        if (errData.type != JSONType.null_) _data["error"]["data"] = errData;
     }
 
     /** Construct an Response from a JSON string.
@@ -446,7 +446,7 @@ struct Response {
     } body {
         auto json = str.parseJSON;
         if ("id" in json
-                && ("result" in json).xor("error" in json)
+                && ("result" in json) != ("error" in json)
                 && "jsonrpc" in json && json["jsonrpc"].str == "2.0") {
 
             return Response(json);
@@ -483,7 +483,7 @@ struct Response {
                     valid JSON-RPC 2.0 response.
     */
     this(JSONValue data) in {
-        assert("jsonrpc" in data && ("result" in data).xor("error" in data),
+        assert("jsonrpc" in data && ("result" in data) != ("error" in data),
                 "Malformed response: missing required field(s).");
     } body {
         _data = data;
@@ -788,7 +788,7 @@ class RPCClient(API, Transport = TCPTransport)
         Response[long] responses;
         auto resps = _transport.receiveJSONObjectOrArray().parseJSON;
 
-        if (resps.type == JSON_TYPE.ARRAY) {
+        if (resps.type == JSONType.array) {
             foreach (resp; resps.array) {
                 auto r = Response(resp);
                 responses[r.id] = r;
@@ -996,13 +996,13 @@ Response executeMethod(API)(Request request, API api)
                     // TODO: I'd rather return nothing; this is just thrown away.
                     Response r;
                     return r;
-                } else if (request.idType == JSON_TYPE.INTEGER) {
+                } else if (request.idType == JSONType.integer) {
                     return Response(request.id, retval);
-                } else if (request.idType == JSON_TYPE.FLOAT) {
+                } else if (request.idType == JSONType.float_) {
                     return Response(request.id!double, retval);
-                } else if (request.idType == JSON_TYPE.STRING) {
+                } else if (request.idType == JSONType.string) {
                     return Response(request.id!string, retval);
-                } else if (request.idType == JSON_TYPE.NULL) {
+                } else if (request.idType == JSONType.null_) {
                     return Response(null, retval);
                 }
                 return Response(
@@ -1260,7 +1260,7 @@ void executeBatch(API, Transport)
         (Transport transport, API api, const char[] received) {
 
     JSONValue batch = parseBatch(transport, received);
-    if (batch.type == JSON_TYPE.NULL) return;
+    if (batch.type == JSONType.null_) return;
 
     JSONValue[] responses;
     // TODO: Could parallelize these. Probably use constructor flag(?)
@@ -1364,7 +1364,7 @@ static string GenCaller(API, string method)() pure {
 
     func ~=
           "    JSONValue vals = args;\n"
-        ~ "    if (args.type != JSON_TYPE.OBJECT) {\n"
+        ~ "    if (args.type != JSONType.object) {\n"
         ~ "        vals = JSONValue(`{}`.parseJSON);\n";
 
     static foreach (i; 0..paramNames.length) {
@@ -1372,7 +1372,7 @@ static string GenCaller(API, string method)() pure {
           "        vals[`" ~ paramNames[i] ~ "`] = args[" ~ i.text ~ "];\n";
     }
         func ~=
-          "    }\n"; // args.type != JSON_TYPE.OBJECT
+          "    }\n"; // args.type != JSONType.object
 
     static if (returnType is typeid(void)) {
         func ~= "    ";
@@ -1473,8 +1473,8 @@ auto unwrapValue(T)(JSONValue value) {
             return cast(T)value.integer;
         }
     } else static if (isBoolean!T) {
-        if (value.type == JSON_TYPE.TRUE) return true;
-        if (value.type == JSON_TYPE.FALSE) return false;
+        if (value.type == JSONType.true_) return true;
+        if (value.type == JSONType.false_) return false;
         raise!(InvalidArgument, value)("Expected a boolean value.");
     } else static if (is(T == typeof(null))) {
         return null;
@@ -1509,18 +1509,6 @@ unittest {
     auto fl = d.unwrapValue!float;
     assert(fl > 2.2 && fl < 2.4);
     assert(e.unwrapValue!bool == true);
-}
-
-bool xor(T)(T left, T right) {
-    return left != right;
-}
-
-@test("xor is correct.")
-unittest {
-    assert(true.xor(false));
-    assert(false.xor(true));
-    assert(! true.xor(true));
-    assert(! false.xor(false));
 }
 
 version(unittest) {
