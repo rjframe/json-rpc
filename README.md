@@ -20,7 +20,7 @@ class APIImpl : MyAPI {
     int three() { return 100; };
 }
 
-// We'll run this in a new thread for this example.
+// We'll run the server in a new thread for this example.
 void startServer(string host, string port) {
     auto server = new RPCServer!APIImpl(host, port);
     server.listen();
@@ -42,11 +42,12 @@ void main() {
     assert(client.one(3) == false);
     assert(client.three() == 100);
 
-    // `call` returns the Response from the server.
+    // The `call` method returns the JSON response from the server.
     auto resp = client.call("one", 3);
     assert(resp.result == JSONValue(false));
 
-    // `notify` executes a function, but doesn't get a response from the server.
+    // `notify` executes a function, but does not get a response from the
+    // server.
     client.notify("one", 3);
 
     // Send a batch.
@@ -67,8 +68,7 @@ void main() {
 
 This is currently usable but may not be stable/reliable (so, usable-ish).
 
-Documentation is currently in the docs/ folder and is not rebuilt often; I'll
-host them properly it once the project is ready.
+Documentation is currently in the docs/ folder and is not rebuilt often.
 
 ## Testing
 
